@@ -1,1 +1,0 @@
-./Release/main.cpp.o ./Release/allegro_gui.cpp.o ./Release/allegro_allegro.cpp.o ./Release/allegro_mouse.cpp.o
