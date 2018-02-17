@@ -12,17 +12,17 @@
 
 using namespace std;
 
-const float PI = asin(1)*2;
+const double PI = asin(1)*2;
 
 class Function{
 public:
-	Function(float(*fptr)(float), string nme = ""){
+	Function(long double(*fptr)(long double), string nme = ""){
 		func_ptr = fptr;
 		
 		name = nme;
 	}
 	
-	Function(function<float(float)> f, string nme = ""){
+	Function(function<long double(long double)> f, string nme = ""){
 		object = true;
 		f_obj = f;
 		
@@ -31,7 +31,7 @@ public:
 	
 	Function(const MathExpression& mexp, string nme = ""){
 		object = true;
-		f_obj = [=](float x){
+		f_obj = [=](long double x){
 			MathExpression m = mexp;
 			return m.calculateElementStack(x);
 		};
@@ -39,18 +39,18 @@ public:
 		name = nme;
 	}
 	
-	Function derivee(const float set_pas = 0.05){
-		function<float(float)> f;
+	Function derivee(const long double set_pas = 0.05){
+		function<long double(long double)> f;
 		if(object){
-			const function<float(float)> f_copy = f_obj;
-			f = [=](float x){
-				//const function<float(float)> f_copy = f_obj;
-				float pas = set_pas;
+			const function<long double(long double)> f_copy = f_obj;
+			f = [=](long double x){
+				//const function<long double(long double)> f_copy = f_obj;
+				long double pas = set_pas;
 				return (f_copy(x)-f_copy(x-pas))/(pas);
 			};
 		} else {
-			f = [=](float x){
-				float pas = set_pas;
+			f = [=](long double x){
+				long double pas = set_pas;
 				return (func_ptr(x)-func_ptr(x-pas))/(pas);
 			};
 		}
@@ -61,22 +61,22 @@ public:
 		return Function(f, new_name);
 	}
 	
-	Function primitive(const float set_pas = 0.05){
-		function<float(float)> f;
+	Function primitive(const long double set_pas = 0.05){
+		function<long double(long double)> f;
 		if(object){
-			const function<float(float)> f_copy = f_obj; 
-			f = [=](float x){
-				float pas = set_pas;
-				float aire = 0;
+			const function<long double(long double)> f_copy = f_obj; 
+			f = [=](long double x){
+				long double pas = set_pas;
+				long double aire = 0;
 				int n = abs(round((x-0)/pas));
 				if( x < 0 )
 					pas = -pas;
 				#pragma omp parallel for reduction(+:aire)
 				for(int i = 0; i <= n; i++){
-					float g = i*pas;
-					float d = g + pas;
-//					float m = g + pas/2;
-					float temp = f_copy(g)*pas + (f_copy(d)-f_copy(g))*pas/2;
+					long double g = i*pas;
+					long double d = g + pas;
+//					long double m = g + pas/2;
+					long double temp = f_copy(g)*pas + (f_copy(d)-f_copy(g))*pas/2;
 					aire += temp;
 				}
 				
@@ -84,17 +84,17 @@ public:
 				return aire;
 			};
 		} else {
-			f = [=](float x){
-				float pas = set_pas;
-				float aire = 0;
+			f = [=](long double x){
+				long double pas = set_pas;
+				long double aire = 0;
 				int n = abs(round((x-0)/pas));
 				if( x < 0 )
 					pas = -pas;
 				#pragma omp parallel for reduction(+:aire)
 				for(int i = 0; i <= n; i++){
-					float g = i*pas;
-					float d = g + pas;
-					float temp = func_ptr(g)*pas + (func_ptr(d)-func_ptr(g))*pas/2;
+					long double g = i*pas;
+					long double d = g + pas;
+					long double temp = func_ptr(g)*pas + (func_ptr(d)-func_ptr(g))*pas/2;
 					
 					aire += temp;
 				}
@@ -111,11 +111,11 @@ public:
 		return Function(f, new_name);
 	}
 	
-	Function tangente(const float xa){
-		const float fprimea = this->derivee(0.01)(xa);
-		const float fa = (*this)(xa);
-		function<float(float)> f;
-		f = [=](float x){
+	Function tangente(const long double xa){
+		const long double fprimea = this->derivee(0.01)(xa);
+		const long double fa = (*this)(xa);
+		function<long double(long double)> f;
+		f = [=](long double x){
 			return fprimea*(x-xa) + fa;
 		};
 		
@@ -127,14 +127,14 @@ public:
 		return Function(f, new_name);
 	}
 	
-	float operator()(float x){
+	long double operator()(long double x){
 		if(object)
 			return f_obj(x);
 		else
 			return func_ptr(x);
 	}
 
-	bool initValues(float debut, float fin, float pas){
+	bool initValues(long double debut, long double fin, long double pas){
 		if(debut > fin){
 			return false;
 		}
@@ -144,7 +144,7 @@ public:
 		int n = (int)((fin-debut)/pas);
 		
 		for(int i = 0; i <= n; i++){
-			float val = 0;
+			long double val = 0;
 			if(object)
 				val = f_obj(debut + pas*i);
 			else
@@ -163,7 +163,7 @@ public:
 		return values.size();
 	}
 	
-	float getValue(int n){
+	long double getValue(int n){
 		return values[n];
 	}
 	
@@ -175,23 +175,24 @@ public:
 		name = n;
 	}
 
-	float x_min = -5, x_max = 5;
-	float pas = 0.1;
+	long double x_min = -5, x_max = 5;
+	long double pas = 0.1;
 
 	bool selected = false;
+	bool hidden = false;
 private:
-	float (*func_ptr)(float);
-	function<float(float)> f_obj;
+	long double (*func_ptr)(long double);
+	function<long double(long double)> f_obj;
 	bool object = false;
 	
 	string name = "";
 	
-	vector<float> values;
+	vector<long double> values;
 };
 
 class Window{
 public:
-	Window(Allegro* allegro, float x_min = -5, float x_max = 5, float y_min = -5, float y_max = 5){
+	Window(Allegro* allegro, long double x_min = -5, long double x_max = 5, long double y_min = -5, long double y_max = 5){
 		this->x_min = x_min;
 		this->x_max = x_max;
 		this->y_min = y_min;
@@ -228,15 +229,15 @@ public:
 		return functions[i];
 	}
 	
-	pair<int, int> pointToPixel(float x, float y){
+	pair<int, int> pointToPixel(long double x, long double y){
 		pair<int, int> pixel;
 		pixel.first = (x-x_min)*disp_width/(x_max - x_min);
 		pixel.second = disp_height - (y-y_min)*disp_height/(y_max - y_min);
 		return pixel;
 	}
 	
-	pair<float, float> pixelToPoint(float x, float y){
-		pair<float, float> point;
+	pair<long double, long double> pixelToPoint(long double x, long double y){
+		pair<long double, long double> point;
 		point.first = (x)*(x_max-x_min)/disp_width + x_min;
 		point.second = (disp_height - y)*(y_max - y_min)/disp_height + y_min;
 		return point;
@@ -245,18 +246,23 @@ public:
 	void drawFunction(unsigned i, Color color){
 		Function func = functions[i];
 		
-		float prec_val = func.getValue(func.x_min);
+		if(func.hidden){
+			return;
+		}
+		
+		long double prec_val = func.getValue(func.x_min);
 		pair<int, int> pixel = pointToPixel(func.x_min, prec_val);
 		int x_prec = pixel.first;
 		int y_prec = pixel.second;
 		
 		for(unsigned i = 0; i < func.getNumberOfValues(); i++ ){
-			float val = func.getValue(i);
+			long double val = func.getValue(i);
 			pixel = pointToPixel(func.x_min + i*pas, func.getValue(i));
 			int x = pixel.first;
 			int y = pixel.second;
-			if(abs(val - prec_val) < 1000){
-				allegro->draw_line(x_prec, y_prec, x, y, color.toAllegro(), 1+func.selected*2);
+			if(abs(val - prec_val) < 1000 && abs(val) < INFINITY && abs(prec_val) < INFINITY){
+				if(i != 0)
+					allegro->draw_line(x_prec, y_prec, x, y, color.toAllegro(), 1+func.selected*2);
 			}
 			x_prec = x;
 			y_prec = y;
@@ -274,7 +280,7 @@ public:
 		}
 	}
 	
-	void drawAxisStep(char direction, float num, float denominator){
+	void drawAxisStep(char direction, long double num, long double denominator){
 		pair<int, int> point;
 		stringstream numstr;
 		if(denominator == 1){
@@ -308,30 +314,30 @@ public:
 		pair<int, int> point;
 		int step_x = max((int)(x_max-x_min)/8, 1);
 		int step_y = max((int)(y_max-y_min)/8, 1);
-		float step_pi = max((int)((x_max-x_min)/(4*PI)), 1);
-		for(float i = 1; i <= x_max; i += step_x){
+		long double step_pi = max((int)((x_max-x_min)/(4*PI)), 1);
+		for(long double i = 1; i <= x_max; i += step_x){
 			drawAxisStep('x', i, 1);
 		}
 		
-		for(float i = -PI/2; i >= x_min; i -= (PI/2)*step_pi){
+		for(long double i = -PI/2; i >= x_min; i -= (PI/2)*step_pi){
 			drawAxisStep('x', i, PI);
 		}
 		
-		for(float i = 1.0; i <= y_max; i += step_y){
+		for(long double i = 1.0; i <= y_max; i += step_y){
 			drawAxisStep('y', i, 1);
 		}
 		
-		for(float i = -1; i >= y_min; i -= step_y){
+		for(long double i = -1; i >= y_min; i -= step_y){
 			drawAxisStep('y', i, 1);
 		}
 	}
 	
-	pair<float, float> getMousePoint(){
+	pair<long double, long double> getMousePoint(){
 		return pixelToPoint(mousePos.first, mousePos.second);
 	}
 	
 	void drawMousePos(){
-		pair<float, float> mp = getMousePoint();
+		pair<long double, long double> mp = getMousePoint();
 		
 		if(allegro->isKeyDown(ALLEGRO_KEY_LSHIFT)){
 			int y = mousePos.second;
@@ -347,11 +353,11 @@ public:
 		x_disp << "x = " << mp.first;
 		y_disp << "y = " << mp.second;
 		
-		allegro->draw_text(0, 0, x_disp.str(), allegro->black, ALLEGRO_ALIGN_LEFT, allegro->getDefaultFont(25));
+		allegro->draw_text(0, 0, x_disp.str(), allegro->black, ALLEGRO_ALIGN_LEFT);
 		allegro->draw_text(0, 15, y_disp.str(), allegro->black, ALLEGRO_ALIGN_LEFT);
 	}
 	
-	void setStep(float pas){
+	void setStep(long double pas){
 		if(pas > 0.0){
 			this->pas_original = pas;
 			this->pas = pas;
@@ -360,16 +366,16 @@ public:
 		}
 	}
 	
-	float getStep(){
+	long double getStep(){
 		return pas;
 	}
 	
-	int getFunctionNearestPoint(pair<float, float> point){
-		pair<float, int> nearestFunc;
+	int getFunctionNearestPoint(pair<long double, long double> point){
+		pair<long double, int> nearestFunc;
 		nearestFunc.second = -1;
 		for(unsigned i = 0; i < functions.size(); i++){
-			float val = functions[i](point.first);
-			float e = abs(point.second - val);
+			long double val = functions[i](point.first);
+			long double e = abs(point.second - val);
 			if(e < 0.5){
 				nearestFunc.first = e;
 				nearestFunc.second = i;
@@ -388,12 +394,16 @@ public:
 		selectedFunction = i;
 	}
 	
+	void toggleHideFunction(unsigned i){
+		functions[i].hidden = not(functions[i].hidden);
+	}
+	
 	void reinitFunction(unsigned i){
 		functions[i].initValues(x_min, x_max, pas);
 	}
 	
 	void reinitAllFunctions(){
-		pas = max(pas_original*abs((float)(x_max - x_min))/11, 0.001f);
+		pas = max(pas_original*abs((long double)(x_max - x_min))/11, (long double)0.001);
 		for(unsigned i = 0; i<functions.size(); i++){
 			reinitFunction(i);
 		}
@@ -404,12 +414,12 @@ public:
 		disp_height = h;
 	}
 	
-	void zoomAt(pair<float, float> point, float coeff){
-		pair<float, float> origine;
+	void zoomAt(pair<long double, long double> point, long double coeff){
+		pair<long double, long double> origine;
 		origine.first = (x_min + x_max)/2;
 		origine.second = (y_min + y_max)/2;
 		
-		pair<float, float> new_origine;
+		pair<long double, long double> new_origine;
 		new_origine.first = (4*origine.first + point.first)/5;
 		new_origine.second = (4*origine.second + point.second)/5;
 		
@@ -433,9 +443,9 @@ protected:
 	
 	Allegro* allegro;
 	
-	float x_min = -5, x_max = 5, y_min = -5, y_max = 5;
-	float pas = 0.1;
-	float pas_original = 0.1;
+	long double x_min = -5, x_max = 5, y_min = -5, y_max = 5;
+	long double pas = 0.1;
+	long double pas_original = 0.1;
 };
 
 void redraw(Allegro* allegro, float fps){
@@ -463,13 +473,13 @@ void mouseMove(Allegro* allegro, void* context, uint16_t event, int x, int y){
 	
 	if(event & Allegro::MOUSE_WHEELED && allegro->isKeyDown(ALLEGRO_KEY_LCTRL)){
 		
-		float coeff = 1;
+		long double coeff = 1;
 		if(x < 0){
 			coeff = 0.99;
 		} else {
 			coeff = 1.01;
 		}
-		//float coeff = min(max(0.5-(x+50)/100, 0.999), 1.001);
+		//long double coeff = min(max(0.5-(x+50)/100, 0.999), 1.001);
 		win->zoomAt(win->getMousePoint(), coeff);
 	}
 }
@@ -494,42 +504,42 @@ void key(Allegro* allegro, void* context, uint16_t ev, uint8_t keycode){
 }
 
 
-float f(float x){
+long double f(long double x){
 	return sin(x);
 }
 
-float f2(float x){
+long double f2(long double x){
 	return x;
 }
 
-float f3(float x){
+long double f3(long double x){
 	return log(x);
 }
 
-float square(float x){
-	float r = 0;
+long double square(long double x){
+	long double r = 0;
 	for(int i = 1; i<=2*500; i+=2){
 		r += sin(i*x)/i;
 	}
 	return r;
 }
 
-float triangle(float x){
-	float r = 0;
+long double triangle(long double x){
+	long double r = 0;
 	for(int i = 1; i<=2*500; i+=2){
 		r += cos(i*x)/(i*i);
 	}
 	return r;
 }
 
-float log_10(float x){
+long double log_10(long double x){
 	return log(x)/log(10);
 }
 
-float f5(float x){
+long double f5(long double x){
 	
 	if(((int)x)%2==0){
-		return log(abs(x)+1) + ((float)(rand() % 10))/40;
+		return log(abs(x)+1) + ((long double)(rand() % 10))/40;
 	} else {
 		return sin(x);
 	}
@@ -546,17 +556,32 @@ void update_func(Allegro* allegro, InputBox* inptbx){
 	try{
 		win->setFunction(f_index, Function(MathExpression(y), string("y=").append(y)));
 		win->setFunction(df_index, Function(MathExpression(y), string("y=").append(y)).derivee());
-		win->setFunction(integf_index, Function(MathExpression(y), string("y=").append(y)).primitive());
+		win->setFunction(integf_index, Function(MathExpression(y), string("y=").append(y)).primitive(0.01));
 		
 	}catch(...){
 		cout << "Bad !" << endl;
 	}
 }
 
+void toggle_integ(Allegro* allegro, Button* btn){
+	Window* win = (Window*)allegro->getContext();
+	
+	win->toggleHideFunction(integf_index);
+}
+
+unsigned inpt_id = 0;
+unsigned tgl_integ_id = 0;
+
 void winResized(Allegro* allegro, void* context, uint16_t ev, int w, int h){
-	InputBox* formula = &(allegro->getGUI()->input_boxes[0]);
+	InputBox* formula = &(allegro->getGUI()->input_boxes[inpt_id-1]);
 	formula->y = allegro->getDisplayHeight()-35;
 	formula->width = (int)(allegro->getDisplayWidth()*0.8);
+	
+	cout << tgl_integ_id << endl;
+	Button* btn = &(allegro->getGUI()->buttons[tgl_integ_id-1]);
+	btn->y = allegro->getDisplayHeight()-35;
+	btn->x = (int)(allegro->getDisplayWidth()*0.8)+5;
+	btn->width = (int)(allegro->getDisplayWidth()*0.1);
 }
 
 int main(int argc, char **argv)
@@ -571,15 +596,15 @@ int main(int argc, char **argv)
 	Window window(allegro, -6, 6, -5, 5);
 	window.setStep(0.01);
 	
-//	window.addFunction(Function(function<float(float)>(
-//	[=](float x){
+//	window.addFunction(Function(function<long double(long double)>(
+//	[=](long double x){
 //		return 0.5*x*x;
 //		}
 //	)));
 //	window.addFunction(Function(&f2).primitive(0.001));
 //	window.addFunction(Function(&triangle).derivee(0.001));
 
-	//window.addFunction(Function(function<float(float)>([=](float x){return x*x-1;})));
+	//window.addFunction(Function(function<long double(long double)>([=](long double x){return x*x-1;})));
 //	Function f(&log);
 //	//f.selected = true;
 //	window.addFunction(f);
@@ -589,13 +614,15 @@ int main(int argc, char **argv)
 //	window.addFunction(Function(&cos, "cos(x)"));
 //	window.addFunction(Function(&cos, "cos(x)").primitive(0.01));
 //	window.addFunction(Function(&cos, "cos(x)").tangente(3));
-//	window.addFunction(Function(function<float(float)>([=](float x){return x;})));
+//	window.addFunction(Function(function<long double(long double)>([=](long double x){return x;})));
 
 	string y = "x^2";
 
 	f_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)));
 	df_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).derivee());
-	integf_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).primitive());
+	integf_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).primitive(0.01));
+	
+	//window.addFunction(Function(MathExpression("sin x"), "test"));
 	
 	allegro->setContext((void*)(&window));
 	
@@ -610,8 +637,11 @@ int main(int argc, char **argv)
 	allegro->bindWindowResized(&winResized);
 	
 	
-	allegro->getGUI()->newInputBox(y, 3, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.8), &update_func);
+	inpt_id = allegro->getGUI()->newInputBox(y, 3, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.8), &update_func)->id;
+	//cout << inpt_id << endl;
 	allegro->getGUI()->input_boxes[0].setAuthorizedChars("01234567890.+-/^*x() ");
+	
+	tgl_integ_id = allegro->getGUI()->newBtn("Primitive", (int)(allegro->getDisplayWidth()*0.8)+5, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.1), &toggle_integ)->id;
 	
 	allegro->gameLoop();
 	return 0;

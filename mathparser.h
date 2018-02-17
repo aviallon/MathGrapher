@@ -17,17 +17,55 @@ const uint16_t MP_OP_PLUS = 1<<7;
 const uint16_t MP_OP_MUL = 1<<8;
 const uint16_t MP_OP_DIV = 1<<9;
 const uint16_t MP_OP_POW = 1<<10;
-const uint16_t MP_OP_SIN = 1<<11;
+const uint16_t MP_FUNCTION = 1<<11;
+
+class MP_Function{
+public:
+	MP_Function(){
+		
+	}
+
+	MP_Function(string id, double(*fptr)(double)){
+		func_ptr = fptr;
+	}
+	
+	bool isMe(string test){
+		if(test.compare(id) != test.npos)
+			return true;
+		return false;
+	}
+	
+	double eval(double x){
+		return func_ptr(x);
+	}
+	
+	string id = "";
+	double (*func_ptr)(double);
+};
+
+int getFuncIndexFromId(vector<MP_Function> fncs, string test){
+	for(unsigned i = 0; i<fncs.size(); i++){
+		if(fncs[i].isMe(test))
+			return i;
+	}
+	return -1;
+}
 
 class Element{
 public:
-	Element(float el, bool isVar = false){
+	Element(long double el, bool isVar = false){
 		val = el;
 		this->isVar = isVar;
 	}
 	
 	Element(uint16_t op){
 		oper = op;
+	}
+	
+	Element(MP_Function f){
+		isFunc = true;
+		oper = MP_FUNCTION;
+		fnc = f;
 	}
 	
 	bool isNum(){
@@ -88,10 +126,13 @@ public:
 		return os;
 	}
 	
-	float calc(float x1, float x2){
+	long double calc(long double x1, long double x2){
 		if(!isOp()){
 			cerr << "Warning ! Not an operator !!!" << endl;
 			return -1;
+		}
+		if(isFunc){
+			return fnc.eval(x1);
 		}
 		//cout << "\t operator : " << oper << " (" << this->getOpRepr() << ")" << endl;
 		//cout << "MP_OP_PLUS = " << MP_OP_PLUS << endl;
@@ -114,8 +155,10 @@ public:
 		return x1;
 	}
 	
-	float val;
+	long double val;
 	bool isVar = false;
+	bool isFunc = false;
+	MP_Function fnc;
 	int16_t oper = -1;
 };
 
@@ -127,6 +170,7 @@ public:
 			parseExpr();
 			shunting_yard();
 		}
+		mp_fncs.push_back(MP_Function("sin", &sin));
 	}
 	
 	void parseExpr(){
@@ -135,8 +179,17 @@ public:
 			string temp(1, cur_char);
 			for(unsigned i = 1; i<=expr.length(); i++){
 				cur_char = expr[i];
+				string test = "";
+				string ccar_str = "";
+				ccar_str += cur_char;
 				//const bool prev_is_num = (getCharType(temp[temp.length()-1]) & getCharType(cur_char) || (getCharType(temp[temp.length()-1]) == MP_OP_MINUS ) );
-				const bool nombre = getCharType(temp[temp.length()-1]) & getCharType(cur_char) == MP_NUMBER;
+				test += temp[temp.length()-1];
+				const bool nombre = getCharType(test) & getCharType(ccar_str) == MP_NUMBER;
+				test.clear();
+				test += temp[temp.length()-2];
+				test += temp[temp.length()-1];
+				test += cur_char;
+				const bool isfunc = getCharType(test) == MP_FUNCTION;
 				//const bool nombre = (prev_is_same && getCharType(cur_char) == MP_NUMBER);
 				cout << i << ", " << temp << endl;
 	//			if(getCharType(cur_char) == MP_BLANK){
@@ -144,6 +197,10 @@ public:
 	//			}
 				//const bool symb_negatif = (getCharType(temp[temp.length()-2]) & MP_BLANK) && (getCharType(temp[temp.length()-1]) == MP_OP_MINUS) && getCharType(cur_char) & MP_NUMBER;
 				if(nombre){
+					temp += cur_char;
+				} else if(isfunc){
+					expr_stack.push_back(temp);
+					temp.clear();
 					temp += cur_char;
 				} else {
 					expr_stack.push_back(temp);
@@ -178,13 +235,13 @@ public:
 	
 	static bool isFloat(string str){
 		istringstream iss(str);
-		float f;
+		long double f;
 		iss >> noskipws >> f;
 		return iss.eof() && !iss.fail();
 	}
 	
-	float calculateElementStack(float x){
-		float r = -1;
+	long double calculateElementStack(long double x){
+		long double r = -1;
 		
 		stack<Element> stk;
 //		stack<Element> stk2;
@@ -210,8 +267,8 @@ public:
 		return r;
 	}
 	
-	float rpn(stack<Element> &stk, float x, unsigned depth = 0){
-		float val1, val2, r=0;
+	long double rpn(stack<Element> &stk, long double x, unsigned depth = 0){
+		long double val1, val2, r=0;
 	//	stringstream msg;
 //		if(stk.empty()){
 //			cout << "error" << endl;
@@ -220,7 +277,10 @@ public:
 		Element el = stk.top();
 		stk.pop();
 		//bool x_here = false;
-		if(el.isOp()){
+		if(el.isFunc){
+			val1 = rpn(stk, x, depth+1);
+			r = el.calc(val1, 0);
+		} else if(el.isOp()){
 			val2 = rpn(stk, x, depth+1);
 			val1 = rpn(stk, x, depth+1);
 			r = el.calc(val1, val2);
@@ -273,17 +333,22 @@ public:
 			
 			for(unsigned i = 0; i<expr_stack.size(); i++){
 				string el = expr_stack[i];
-				uint16_t el_type = getCharType(el[0]);
+				uint16_t el_type = getCharType(el);
 				if(el_type > MP_OPERATOR){
 					while(!operator_stack.empty() && operator_stack.top()!=MP_BRACKET_L && hasHigherPrecedence(operator_stack.top(), el_type)){
 						if(operator_stack.top() != MP_BRACKET_L && operator_stack.top() != MP_BRACKET_R){
-							output_stack.push_back(Element(operator_stack.top()));
+							if(el_type == MP_FUNCTION){
+								int f_id = getFuncIndexFromId(mp_fncs, el);
+								output_stack.push_back(Element(mp_fncs[f_id]));
+							} else {
+								output_stack.push_back(Element(operator_stack.top()));
+							}
 						}
 						operator_stack.pop();
 					}
 					operator_stack.push(el_type);
 				} else if(el_type == MP_NUMBER){
-					float temp = stof(el);
+					long double temp = stof(el);
 					output_stack.push_back(Element(temp));
 				} else if(el_type == MP_XVAR){
 					output_stack.push_back(Element(0, true));
@@ -291,7 +356,10 @@ public:
 					operator_stack.push(el_type);
 				} else if(el_type == MP_BRACKET_R){
 					while(!operator_stack.empty() && operator_stack.top() != MP_BRACKET_L){
-						if(operator_stack.top() != MP_BRACKET_L && operator_stack.top() != MP_BRACKET_R){
+						if(el_type == MP_FUNCTION){
+							int f_id = getFuncIndexFromId(mp_fncs, el);
+							output_stack.push_back(Element(mp_fncs[f_id]));
+						} else {
 							output_stack.push_back(Element(operator_stack.top()));
 						}
 						operator_stack.pop();
@@ -301,7 +369,9 @@ public:
 			}
 			
 			while(!operator_stack.empty()){
-				if(operator_stack.top() != MP_BRACKET_L && operator_stack.top() != MP_BRACKET_R){
+				if(operator_stack.top() == MP_FUNCTION){
+					output_stack.push_back(Element(mp_fncs[0]));
+				} else {
 					output_stack.push_back(Element(operator_stack.top()));
 				}
 				operator_stack.pop();
@@ -328,18 +398,24 @@ public:
 			return 3;
 		} else if(op == MP_OP_POW){
 			return 4;
+		} else if(op == MP_FUNCTION){
+			return 5;
 		} else if(op == MP_BRACKET_L || op == MP_BRACKET_R){
 			return UINT8_MAX;
 		}
+		return 0;
 	}
 	
 	static bool getRightAssociativity(uint16_t op){
-		if(op == MP_OP_POW)
+		if(op == MP_OP_POW || op == MP_FUNCTION)
 			return true;
 		return false;
 	}
 	
-	uint16_t getCharType(char c){
+	uint16_t getCharType(string test){
+		
+		char c = test[0];
+		
 		string numbers = "0123456789.";
 		string blanks = " ";
 		
@@ -369,13 +445,18 @@ public:
 		if(c == 'x'){
 			return MP_XVAR;
 		}
+		if(test.length() < 3){
+			return 0;
+		}
+		if(getFuncIndexFromId(mp_fncs, test) != -1){
+			return MP_FUNCTION;
+		}
 		
 		return 0;
 	}
 private:
+	vector<MP_Function> mp_fncs;
 	string expr;
 	vector<string> expr_stack;
 	vector<Element> el_stack;
 };
-
-
