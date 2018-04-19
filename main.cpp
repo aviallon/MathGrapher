@@ -508,8 +508,8 @@ long double f(long double x){
 	return sin(x);
 }
 
-long double f2(long double x){
-	return x;
+long double sigmoide(long double x){
+	return 1/(1+exp(-100*x));
 }
 
 long double f3(long double x){
@@ -536,14 +536,7 @@ long double log_10(long double x){
 	return log(x)/log(10);
 }
 
-long double f5(long double x){
-	
-	if(((int)x)%2==0){
-		return log(abs(x)+1) + ((long double)(rand() % 10))/40;
-	} else {
-		return sin(x);
-	}
-}
+
 
 unsigned f_index = 0;
 unsigned df_index = 0;
@@ -607,10 +600,10 @@ int main(int argc, char **argv)
 	//window.addFunction(Function(function<long double(long double)>([=](long double x){return x*x-1;})));
 //	Function f(&log);
 //	//f.selected = true;
-//	window.addFunction(f);
+	window.addFunction(Function(&sigmoide, "sigmoide"));
 //	window.addFunction(f.derivee(0.001));
-	window.addFunction(Function(&log_10, "log"));
-	window.addFunction(Function(&exp, "exp"));
+//	window.addFunction(Function(&log_10, "log"));
+//	window.addFunction(Function(&exp, "exp"));
 //	window.addFunction(Function(&cos, "cos(x)"));
 //	window.addFunction(Function(&cos, "cos(x)").primitive(0.01));
 //	window.addFunction(Function(&cos, "cos(x)").tangente(3));
