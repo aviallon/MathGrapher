@@ -14,4 +14,4 @@ compiler:
 # Build steps
 script:
   - git pull
-  - make -f MathGrapher.mk
+  - make
