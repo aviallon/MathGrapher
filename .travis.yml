@@ -1,0 +1,15 @@
+os: linux
+sudo: required
+before_install:
+  - sudo apt-get install liballegro5-dev liballegro-dialog5-dev liballegro-ttf5-dev libboost1.63-all-dev git
+  
+# Enable C++ support
+language: cpp
+
+# Compiler selection
+compiler:
+  - gcc
+
+# Build steps
+script:
+  - make -f MathGrapher.mk
