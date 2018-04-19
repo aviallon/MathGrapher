@@ -6,7 +6,7 @@
 ProjectName            :=MathGrapher
 ConfigurationName      :=Release
 WorkspacePath          :=/home/aviallon/Documents/dev
-ProjectPath            :=/home/aviallon/Documents/dev/MathGrapher
+ProjectPath            :=./
 IntermediateDirectory  :=./Release
 OutDir                 := $(IntermediateDirectory)
 CurrentFileName        :=
@@ -92,7 +92,7 @@ PreBuild:
 ## Objects
 ##
 $(IntermediateDirectory)/main.cpp$(ObjectSuffix): main.cpp $(IntermediateDirectory)/main.cpp$(DependSuffix)
-	$(CXX) $(IncludePCH) $(SourceSwitch) "/home/aviallon/Documents/dev/MathGrapher/main.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/main.cpp$(ObjectSuffix) $(IncludePath)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "main.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/main.cpp$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/main.cpp$(DependSuffix): main.cpp
 	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/main.cpp$(ObjectSuffix) -MF$(IntermediateDirectory)/main.cpp$(DependSuffix) -MM main.cpp
 
@@ -100,7 +100,7 @@ $(IntermediateDirectory)/main.cpp$(PreprocessSuffix): main.cpp
 	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/main.cpp$(PreprocessSuffix) main.cpp
 
 $(IntermediateDirectory)/allegro_gui.cpp$(ObjectSuffix): allegro/gui.cpp $(IntermediateDirectory)/allegro_gui.cpp$(DependSuffix)
-	$(CXX) $(IncludePCH) $(SourceSwitch) "/home/aviallon/Documents/dev/MathGrapher/allegro/gui.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/allegro_gui.cpp$(ObjectSuffix) $(IncludePath)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "allegro/gui.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/allegro_gui.cpp$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/allegro_gui.cpp$(DependSuffix): allegro/gui.cpp
 	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/allegro_gui.cpp$(ObjectSuffix) -MF$(IntermediateDirectory)/allegro_gui.cpp$(DependSuffix) -MM allegro/gui.cpp
 
@@ -108,7 +108,7 @@ $(IntermediateDirectory)/allegro_gui.cpp$(PreprocessSuffix): allegro/gui.cpp
 	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/allegro_gui.cpp$(PreprocessSuffix) allegro/gui.cpp
 
 $(IntermediateDirectory)/allegro_allegro.cpp$(ObjectSuffix): allegro/allegro.cpp $(IntermediateDirectory)/allegro_allegro.cpp$(DependSuffix)
-	$(CXX) $(IncludePCH) $(SourceSwitch) "/home/aviallon/Documents/dev/MathGrapher/allegro/allegro.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/allegro_allegro.cpp$(ObjectSuffix) $(IncludePath)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "allegro/allegro.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/allegro_allegro.cpp$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/allegro_allegro.cpp$(DependSuffix): allegro/allegro.cpp
 	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/allegro_allegro.cpp$(ObjectSuffix) -MF$(IntermediateDirectory)/allegro_allegro.cpp$(DependSuffix) -MM allegro/allegro.cpp
 
@@ -116,7 +116,7 @@ $(IntermediateDirectory)/allegro_allegro.cpp$(PreprocessSuffix): allegro/allegro
 	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/allegro_allegro.cpp$(PreprocessSuffix) allegro/allegro.cpp
 
 $(IntermediateDirectory)/allegro_mouse.cpp$(ObjectSuffix): allegro/mouse.cpp $(IntermediateDirectory)/allegro_mouse.cpp$(DependSuffix)
-	$(CXX) $(IncludePCH) $(SourceSwitch) "/home/aviallon/Documents/dev/MathGrapher/allegro/mouse.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/allegro_mouse.cpp$(ObjectSuffix) $(IncludePath)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "allegro/mouse.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/allegro_mouse.cpp$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/allegro_mouse.cpp$(DependSuffix): allegro/mouse.cpp
 	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/allegro_mouse.cpp$(ObjectSuffix) -MF$(IntermediateDirectory)/allegro_mouse.cpp$(DependSuffix) -MM allegro/mouse.cpp
 
@@ -129,6 +129,6 @@ $(IntermediateDirectory)/allegro_mouse.cpp$(PreprocessSuffix): allegro/mouse.cpp
 ## Clean
 ##
 clean:
-	$(RM) -r ./Release/
+	$(RM) -r ./$(OutDir)
 
 

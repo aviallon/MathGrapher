@@ -5,15 +5,15 @@
 ## Release
 ProjectName            :=MathGrapher
 ConfigurationName      :=Release
-WorkspacePath          :=/home/aviallon/Documents/TIPE/DronePilot
+WorkspacePath          :=/home/aviallon/Documents/dev
 ProjectPath            :=/home/aviallon/Documents/dev/MathGrapher
 IntermediateDirectory  :=./Release
 OutDir                 := $(IntermediateDirectory)
 CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
-User                   :=Antoine Viallon
-Date                   :=31/03/18
+User                   :=
+Date                   :=04/19/18
 CodeLitePath           :=/home/aviallon/.codelite
 LinkerName             :=/usr/bin/g++
 SharedObjectLinkerName :=/usr/bin/g++ -shared -fPIC
