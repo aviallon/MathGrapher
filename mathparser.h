@@ -30,7 +30,7 @@ public:
 	}
 	
 	bool isMe(string test){
-		if(test.compare(id) != test.npos)
+		if(unsigned(test.compare(id)) != test.npos)
 			return true;
 		return false;
 	}
@@ -184,7 +184,7 @@ public:
 				ccar_str += cur_char;
 				//const bool prev_is_num = (getCharType(temp[temp.length()-1]) & getCharType(cur_char) || (getCharType(temp[temp.length()-1]) == MP_OP_MINUS ) );
 				test += temp[temp.length()-1];
-				const bool nombre = getCharType(test) & getCharType(ccar_str) == MP_NUMBER;
+				const bool nombre = (getCharType(test) & getCharType(ccar_str)) == MP_NUMBER;
 				test.clear();
 				test += temp[temp.length()-2];
 				test += temp[temp.length()-1];

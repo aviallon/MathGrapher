@@ -9,188 +9,33 @@
 #include <random>
 #include "allegro/allegro.h"
 #include "mathparser.h"
+#include "function.h"
+#include "scatterplot.h"
 
 using namespace std;
 
 const double PI = asin(1)*2;
 
-class Function{
-public:
-	Function(long double(*fptr)(long double), string nme = ""){
-		func_ptr = fptr;
-		
-		name = nme;
-	}
-	
-	Function(function<long double(long double)> f, string nme = ""){
-		object = true;
-		f_obj = f;
-		
-		name = nme;
-	}
-	
-	Function(const MathExpression& mexp, string nme = ""){
-		object = true;
-		f_obj = [=](long double x){
-			MathExpression m = mexp;
-			return m.calculateElementStack(x);
-		};
-		
-		name = nme;
-	}
-	
-	Function derivee(const long double set_pas = 0.05){
-		function<long double(long double)> f;
-		if(object){
-			const function<long double(long double)> f_copy = f_obj;
-			f = [=](long double x){
-				//const function<long double(long double)> f_copy = f_obj;
-				long double pas = set_pas;
-				return (f_copy(x)-f_copy(x-pas))/(pas);
-			};
-		} else {
-			f = [=](long double x){
-				long double pas = set_pas;
-				return (func_ptr(x)-func_ptr(x-pas))/(pas);
-			};
-		}
-		string new_name = "df";
-		if(name != ""){
-			new_name = "d(" + name + ")";
-		}
-		return Function(f, new_name);
-	}
-	
-	Function primitive(const long double set_pas = 0.05){
-		function<long double(long double)> f;
-		if(object){
-			const function<long double(long double)> f_copy = f_obj; 
-			f = [=](long double x){
-				long double pas = set_pas;
-				long double aire = 0;
-				int n = abs(round((x-0)/pas));
-				if( x < 0 )
-					pas = -pas;
-				#pragma omp parallel for reduction(+:aire)
-				for(int i = 0; i <= n; i++){
-					long double g = i*pas;
-					long double d = g + pas;
-//					long double m = g + pas/2;
-					long double temp = f_copy(g)*pas + (f_copy(d)-f_copy(g))*pas/2;
-					aire += temp;
-				}
-				
-
-				return aire;
-			};
-		} else {
-			f = [=](long double x){
-				long double pas = set_pas;
-				long double aire = 0;
-				int n = abs(round((x-0)/pas));
-				if( x < 0 )
-					pas = -pas;
-				#pragma omp parallel for reduction(+:aire)
-				for(int i = 0; i <= n; i++){
-					long double g = i*pas;
-					long double d = g + pas;
-					long double temp = func_ptr(g)*pas + (func_ptr(d)-func_ptr(g))*pas/2;
-					
-					aire += temp;
-				}
-
-				return aire;
-			};
-		}
-		
-		string new_name = "\u222Bf";
-		if(name != ""){
-			new_name = "\u222B(" + name + ")";
-		}
-		
-		return Function(f, new_name);
-	}
-	
-	Function tangente(const long double xa){
-		const long double fprimea = this->derivee(0.01)(xa);
-		const long double fa = (*this)(xa);
-		function<long double(long double)> f;
-		f = [=](long double x){
-			return fprimea*(x-xa) + fa;
-		};
-		
-		string new_name = "T:f";
-		if(name != ""){
-			new_name = "T:(" + name + ")";
-		}
-		
-		return Function(f, new_name);
-	}
-	
-	long double operator()(long double x){
-		if(object)
-			return f_obj(x);
-		else
-			return func_ptr(x);
-	}
-
-	bool initValues(long double debut, long double fin, long double pas){
-		if(debut > fin){
-			return false;
-		}
-		if(values.size() > 0){
-			values.clear();
-		}
-		int n = (int)((fin-debut)/pas);
-		
-		for(int i = 0; i <= n; i++){
-			long double val = 0;
-			if(object)
-				val = f_obj(debut + pas*i);
-			else
-				val = func_ptr(debut + pas*i);
-			values.push_back(val);
-		}
-		
-		x_min = debut;
-		x_max = fin;
-		this->pas = pas;
-		
-		return true;
-	}
-	
-	unsigned getNumberOfValues(){
-		return values.size();
-	}
-	
-	long double getValue(int n){
-		return values[n];
-	}
-	
-	string getName(){
-		return name;
-	}
-	
-	void setName(string n){
-		name = n;
-	}
-
-	long double x_min = -5, x_max = 5;
-	long double pas = 0.1;
-
-	bool selected = false;
-	bool hidden = false;
-private:
-	long double (*func_ptr)(long double);
-	function<long double(long double)> f_obj;
-	bool object = false;
-	
-	string name = "";
-	
-	vector<long double> values;
-};
-
 class Window{
+protected:
+	vector<Function> functions;
+	vector<ScatterPlot> scatter;
+	
+	vector<Color> colorWheel;
+	
+	int selectedFunction = -1;
+	
+	Allegro* allegro;
+	
+	long double x_min = -5, x_max = 5, y_min = -5, y_max = 5;
+	long double pas = 0.1;
+	long double pas_original = 0.1;
+	
+	
+	void drawCross(int x, int y, int s, Color color, int width = 1){
+		allegro->draw_line(x-s/2 - 1, y, x+s/2, y, color.toAllegro(), width);
+		allegro->draw_line(x, y-s/2 - 1, x, y+s/2, color.toAllegro(), width);
+	}
 public:
 	Window(Allegro* allegro, long double x_min = -5, long double x_max = 5, long double y_min = -5, long double y_max = 5){
 		this->x_min = x_min;
@@ -217,6 +62,11 @@ public:
 		return functions.size()-1;
 	}
 	
+	unsigned addScatter(ScatterPlot sp){
+		scatter.push_back(sp);
+		return scatter.size()-1;
+	}
+	
 	void setFunction(unsigned i, Function f){
 		cout << "Changing function " << i << "..." << endl << "\tCalculating values...";
 		cout.flush();
@@ -225,8 +75,16 @@ public:
 		functions[i]=f;
 	}
 	
+	void setScatter(unsigned i, ScatterPlot sp){
+		scatter[i]=sp;
+	}
+	
 	Function getFunction(unsigned i){
 		return functions[i];
+	}
+	
+	ScatterPlot getScatter(unsigned i){
+		return scatter[i];
 	}
 	
 	pair<int, int> pointToPixel(long double x, long double y){
@@ -257,7 +115,7 @@ public:
 		
 		for(unsigned i = 0; i < func.getNumberOfValues(); i++ ){
 			long double val = func.getValue(i);
-			pixel = pointToPixel(func.x_min + i*pas, func.getValue(i));
+			pixel = pointToPixel(func.x_min + i*pas, val);
 			int x = pixel.first;
 			int y = pixel.second;
 			if(abs(val - prec_val) < 1000 && abs(val) < INFINITY && abs(prec_val) < INFINITY){
@@ -273,10 +131,33 @@ public:
 		allegro->draw_text(disp_width - 4, 5+15*i, func.getName(), color.toAllegro(), ALLEGRO_ALIGN_RIGHT);
 	}
 	
+	void drawScatter(unsigned i, Color color){
+		ScatterPlot sp = scatter[i];
+		if(sp.hidden){
+			return;
+		}
+		
+		pair<int, int> pixel;
+		for(unsigned i = 0; i < sp.getN(); i++){
+			Point p = sp.getPoint(i);
+			if(p.x > x_min && p.x < x_max && p.y > y_min && p.y < y_max){
+				pixel = pointToPixel(p.x, p.y);
+				drawCross(pixel.first, pixel.second, 8, color, 1);
+			}
+		}
+	}
+	
 	void drawAllFunctions(){
 		for(unsigned i = 0; i < functions.size(); i++){
 			Color color = colorWheel[i%colorWheel.size()];
 			drawFunction(i, color);
+		}
+	}
+	
+	void drawAllScatterPlots(){
+		for(unsigned i = 0; i < scatter.size(); i++){
+			Color color = colorWheel[i%colorWheel.size()];
+			drawScatter(i, color);
 		}
 	}
 	
@@ -434,18 +315,6 @@ public:
 	int disp_height = 100;
 	
 	pair<int, int> mousePos;
-protected:
-	vector<Function> functions;
-	
-	vector<Color> colorWheel;
-	
-	int selectedFunction = -1;
-	
-	Allegro* allegro;
-	
-	long double x_min = -5, x_max = 5, y_min = -5, y_max = 5;
-	long double pas = 0.1;
-	long double pas_original = 0.1;
 };
 
 void redraw(Allegro* allegro, float fps){
@@ -457,6 +326,7 @@ void redraw(Allegro* allegro, float fps){
 	
 	win->drawAxis();
 	win->drawAllFunctions();
+	win->drawAllScatterPlots();
 	
 	win->drawMousePos();
 	
@@ -600,7 +470,7 @@ int main(int argc, char **argv)
 	//window.addFunction(Function(function<long double(long double)>([=](long double x){return x*x-1;})));
 //	Function f(&log);
 //	//f.selected = true;
-	window.addFunction(Function(&sigmoide, "sigmoide"));
+//	window.addFunction(Function(&sigmoide, "sigmoide"));
 //	window.addFunction(f.derivee(0.001));
 //	window.addFunction(Function(&log_10, "log"));
 //	window.addFunction(Function(&exp, "exp"));
@@ -608,6 +478,13 @@ int main(int argc, char **argv)
 //	window.addFunction(Function(&cos, "cos(x)").primitive(0.01));
 //	window.addFunction(Function(&cos, "cos(x)").tangente(3));
 //	window.addFunction(Function(function<long double(long double)>([=](long double x){return x;})));
+
+	ScatterPlot test;
+	test.addPoint(0, 2);
+	test.addPoint(3, 0.5);
+	test.addPoint(1, 0.7);
+	unsigned test_index = window.addScatter(test);
+
 
 	string y = "x^2";
 

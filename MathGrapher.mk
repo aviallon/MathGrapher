@@ -13,7 +13,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=
-Date                   :=04/19/18
+Date                   :=04/26/18
 CodeLitePath           :=/home/aviallon/.codelite
 LinkerName             :=/usr/bin/g++
 SharedObjectLinkerName :=/usr/bin/g++ -shared -fPIC
@@ -39,8 +39,8 @@ LinkOptions            := -fopenmp -Wl,--format=binary -Wl,allegro/fonts/Arimo-R
 IncludePath            :=  $(IncludeSwitch). $(IncludeSwitch). 
 IncludePCH             := 
 RcIncludePath          := 
-Libs                   := $(LibrarySwitch)allegro $(LibrarySwitch)allegro_image $(LibrarySwitch)allegro_primitives $(LibrarySwitch)allegro_memfile $(LibrarySwitch)allegro_ttf $(LibrarySwitch)allegro_font $(LibrarySwitch)allegro_dialog $(LibrarySwitch)stdc++fs 
-ArLibs                 :=  "allegro" "allegro_image" "allegro_primitives" "allegro_memfile" "allegro_ttf" "allegro_font" "allegro_dialog" "stdc++fs" 
+Libs                   := $(LibrarySwitch)allegro $(LibrarySwitch)allegro_image $(LibrarySwitch)allegro_primitives $(LibrarySwitch)allegro_memfile $(LibrarySwitch)allegro_ttf $(LibrarySwitch)allegro_font $(LibrarySwitch)allegro_dialog 
+ArLibs                 :=  "allegro" "allegro_image" "allegro_primitives" "allegro_memfile" "allegro_ttf" "allegro_font" "allegro_dialog" 
 LibPath                := $(LibraryPathSwitch). 
 
 ##

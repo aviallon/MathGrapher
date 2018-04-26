@@ -8,6 +8,8 @@
   <Description/>
   <Dependencies/>
   <VirtualDirectory Name="src">
+    <File Name="scatterplot.h"/>
+    <File Name="function.h"/>
     <File Name="mathparser.h"/>
     <VirtualDirectory Name="allegro">
       <File Name="allegro/mouse.h"/>
@@ -81,7 +83,6 @@
         <Library Value="allegro_ttf"/>
         <Library Value="allegro_font"/>
         <Library Value="allegro_dialog"/>
-        <Library Value="stdc++fs"/>
       </Linker>
       <ResourceCompiler Options="" Required="no"/>
       <General OutputFile="$(IntermediateDirectory)/$(ProjectName)" IntermediateDirectory="./Release" Command="./$(ProjectName)" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes" IsGUIProgram="no" IsEnabled="yes"/>
