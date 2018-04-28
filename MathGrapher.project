@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<CodeLite_Project Name="MathGrapher" Version="10.0.0" InternalType="Console">
+<CodeLite_Project Name="Oscilloscope" Version="10.0.0" InternalType="Console">
   <Plugins>
     <Plugin Name="qmake">
       <![CDATA[00010001N0007Release000000000000]]>
@@ -8,9 +8,9 @@
   <Description/>
   <Dependencies/>
   <VirtualDirectory Name="src">
+    <File Name="oscilloscope.h"/>
     <File Name="scatterplot.h"/>
     <File Name="function.h"/>
-    <File Name="mathparser.h"/>
     <VirtualDirectory Name="allegro">
       <File Name="allegro/mouse.h"/>
       <File Name="allegro/mouse.cpp"/>
@@ -28,6 +28,8 @@
       </Compiler>
       <Linker Options="-fopenmp">
         <LibraryPath Value="."/>
+        <Library Value="serial"/>
+        <Library Value="pthread"/>
       </Linker>
       <ResourceCompiler Options=""/>
     </GlobalSettings>

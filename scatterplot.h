@@ -2,15 +2,31 @@
 #define SCATTERPLOT_H
 
 #include <vector>
+#include <algorithm>
+using namespace std;
 
-struct Point{
+class Point{
 public:
 	long double x, y;
-	Point(long double x, long double y){
+	Point(long double x = 0, long double y = 0){
 		this->x = x;
 		this->y = y;
 	}
 	
+	bool operator<(const Point& p){
+		return this->y < p.y;
+	}
+	
+	bool operator>(const Point& p){
+		return this->y > p.y;
+	}
+	
+	bool operator<(long double d){
+		return this->y < d;
+	}
+	bool operator>(long double d){
+		return this->y > d;
+	}
 };
 
 class ScatterPlot {
@@ -41,6 +57,28 @@ public:
 	
 	unsigned getN(){
 		return points.size();
+	}
+	
+	Point getMax(){
+		return *std::max_element(points.begin(), points.end(), [](Point i, Point j){
+			return i.y<j.y;
+		});
+	}
+	
+	Point getMin(){
+		return *std::min_element(points.begin(), points.end(), [](Point i, Point j){
+			return i.y<j.y;
+		});
+	}
+	
+	long double getAverage(){
+		long double sum = 0;
+		#pragma omp simd reduction(+:sum)
+		for(unsigned i = 0; i<points.size(); i++){
+			sum += points[i].y;
+		}
+		
+		return sum/points.size();
 	}
 };
 

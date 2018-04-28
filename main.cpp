@@ -7,12 +7,14 @@
 #include <utility>
 #include <functional>
 #include <random>
+#include <serial/serial.h>
 #include "allegro/allegro.h"
-#include "mathparser.h"
-#include "function.h"
-#include "scatterplot.h"
 
 using namespace std;
+
+#include "function.h"
+#include "scatterplot.h"
+#include "oscilloscope.h"
 
 const double PI = asin(1)*2;
 
@@ -83,8 +85,8 @@ public:
 		return functions[i];
 	}
 	
-	ScatterPlot getScatter(unsigned i){
-		return scatter[i];
+	ScatterPlot* getScatter(unsigned i){
+		return &scatter[i];
 	}
 	
 	pair<int, int> pointToPixel(long double x, long double y){
@@ -137,13 +139,22 @@ public:
 			return;
 		}
 		
-		pair<int, int> pixel;
-		for(unsigned i = 0; i < sp.getN(); i++){
+		pair<int, int> pixel, prev_pixel;
+		
+		Point p1 = sp.getPoint(0);
+		prev_pixel = pointToPixel(p1.x, p1.y);
+		
+		for(unsigned i = 1; i < sp.getN(); i++){
 			Point p = sp.getPoint(i);
-			if(p.x > x_min && p.x < x_max && p.y > y_min && p.y < y_max){
+			//if(p.x > x_min && p.x < x_max && p.y > y_min && p.y < y_max){
 				pixel = pointToPixel(p.x, p.y);
-				drawCross(pixel.first, pixel.second, 8, color, 1);
-			}
+				if(sp.joinPoints){
+					allegro->draw_line(prev_pixel.first, prev_pixel.second, pixel.first, pixel.second, color.toAllegro(), 1);
+				} else {
+					drawCross(pixel.first, pixel.second, 8, color, 1);
+				}
+				prev_pixel = pixel;
+			//}
 		}
 	}
 	
@@ -193,15 +204,16 @@ public:
 		
 		// On affiche les traits sur les axes
 		pair<int, int> point;
-		int step_x = max((int)(x_max-x_min)/8, 1);
+		int step_x = max((int)(x_max-x_min)/10, 1);
 		int step_y = max((int)(y_max-y_min)/8, 1);
 		long double step_pi = max((int)((x_max-x_min)/(4*PI)), 1);
-		for(long double i = 1; i <= x_max; i += step_x){
+		for(long double i = 0.1; i <= x_max; i += step_x){
 			drawAxisStep('x', i, 1);
 		}
 		
-		for(long double i = -PI/2; i >= x_min; i -= (PI/2)*step_pi){
-			drawAxisStep('x', i, PI);
+		//for(long double i = -PI/2; i >= x_min; i -= (PI/2)*step_pi){
+		for(long double i = -0.1; i >= x_min; i -= step_x){
+			drawAxisStep('x', i, 1);
 		}
 		
 		for(long double i = 1.0; i <= y_max; i += step_y){
@@ -295,20 +307,20 @@ public:
 		disp_height = h;
 	}
 	
-	void zoomAt(pair<long double, long double> point, long double coeff){
-		pair<long double, long double> origine;
-		origine.first = (x_min + x_max)/2;
-		origine.second = (y_min + y_max)/2;
+	void zoom(long double coeff){
+//		pair<long double, long double> origine;
+//		origine.first = (x_min + x_max)/2;
+//		origine.second = (y_min + y_max)/2;
 		
-		pair<long double, long double> new_origine;
-		new_origine.first = (4*origine.first + point.first)/5;
-		new_origine.second = (4*origine.second + point.second)/5;
-		
-		x_min = (x_min)*coeff;
-		x_max = (x_max)*coeff;
+	//	x_min = (x_min)*coeff;
+	//	x_max = (x_max)*coeff;
 		
 		y_min = (y_min)*coeff;
 		y_max = (y_max)*coeff;
+	}
+	
+	void setXmax(int xmax){
+		x_max = (long double)(xmax);
 	}
 	
 	int disp_width = 100;
@@ -317,12 +329,48 @@ public:
 	pair<int, int> mousePos;
 };
 
+
+string subunitsConvert(double n, string unit = ""){
+	string sub = "";
+	if(n > 2000){
+		sub = "k";
+		n /= 1000;
+	} else if(n > 2000000){
+		sub = "M";
+		n /= 1000000;
+	} else if(n < 0.005){
+		sub = "µ";
+		n *= 1000000;
+	} else if(n < 0.5){
+		sub = "m";
+		n *= 1000;
+	}
+	
+	n = round(n*100)/100;
+		
+	stringstream ss;
+	ss << n << " " << sub << unit;
+	return ss.str();
+}
+
+unsigned oscilloscope_index;
+Oscilloscope* osc;
+bool stop = false;
+bool update = true;
+bool paused = false;
+bool updateAnalysis = true;
+Point Pmin, Pmax;
+long double avg;
+double periode = 0;
+unsigned stimeInptbx_index;
+unsigned triggerBtn_index;
+
 void redraw(Allegro* allegro, float fps){
 	allegro->draw_rectangle(0, 0, allegro->getDisplayWidth(), allegro->getDisplayHeight(), allegro->rgb(255, 255, 255), 1, true);
 	
 	Window* win = (Window*)allegro->getContext();
 	
-	win->setDispSize(allegro->getDisplayWidth(), allegro->getDisplayHeight()-45);
+	win->setDispSize(allegro->getDisplayWidth(), allegro->getDisplayHeight()-60);
 	
 	win->drawAxis();
 	win->drawAllFunctions();
@@ -330,8 +378,35 @@ void redraw(Allegro* allegro, float fps){
 	
 	win->drawMousePos();
 	
-	allegro->draw_rectangle(0, allegro->getDisplayHeight()-45, allegro->getDisplayWidth(), allegro->getDisplayHeight(), allegro->rgb(100, 100, 100), 1, true);
-	//win->reinitFunction(3);
+	stringstream ss;
+	ss << "VMax = " << subunitsConvert(Pmax.y, "V");
+	string max = ss.str();
+	
+	ss.str(string());
+	ss << "VMin = " << subunitsConvert(Pmin.y, "V");
+	string min = ss.str();
+	
+	ss.str(string());
+	ss << "V~ = " << subunitsConvert(avg, "V");
+	string avgstr = ss.str();
+	
+	ss.str(string());
+	ss << "T = " << subunitsConvert(periode/1000000, "s");
+	string periodestr = ss.str();
+	
+	double freq = 1/(periode/1000000);
+	ss.str(string());
+	ss << "F = " << subunitsConvert(freq, "Hz");
+	string freqstr = ss.str();
+	
+	allegro->draw_rectangle(0, allegro->getDisplayHeight()-60, allegro->getDisplayWidth(), allegro->getDisplayHeight(), allegro->rgb(100, 100, 100), 1, true
+);
+	ALLEGRO_COLOR yellow = allegro->rgb(250, 250, 0);
+	allegro->draw_text(0, allegro->getDisplayHeight()-57, max, yellow, ALLEGRO_ALIGN_LEFT);
+	allegro->draw_text(0, allegro->getDisplayHeight()-44, min, yellow, ALLEGRO_ALIGN_LEFT);
+	allegro->draw_text(0, allegro->getDisplayHeight()-29, avgstr, yellow, ALLEGRO_ALIGN_LEFT);
+	allegro->draw_text(0, allegro->getDisplayHeight()-16, periodestr, yellow, ALLEGRO_ALIGN_LEFT);
+	allegro->draw_text(100, allegro->getDisplayHeight()-57, freqstr, yellow, ALLEGRO_ALIGN_LEFT);
 }
 
 void mouseMove(Allegro* allegro, void* context, uint16_t event, int x, int y){
@@ -350,7 +425,7 @@ void mouseMove(Allegro* allegro, void* context, uint16_t event, int x, int y){
 			coeff = 1.01;
 		}
 		//long double coeff = min(max(0.5-(x+50)/100, 0.999), 1.001);
-		win->zoomAt(win->getMousePoint(), coeff);
+		win->zoom(coeff);
 	}
 }
 
@@ -373,19 +448,6 @@ void key(Allegro* allegro, void* context, uint16_t ev, uint8_t keycode){
 	}
 }
 
-
-long double f(long double x){
-	return sin(x);
-}
-
-long double sigmoide(long double x){
-	return 1/(1+exp(-100*x));
-}
-
-long double f3(long double x){
-	return log(x);
-}
-
 long double square(long double x){
 	long double r = 0;
 	for(int i = 1; i<=2*500; i+=2){
@@ -402,49 +464,61 @@ long double triangle(long double x){
 	return r;
 }
 
-long double log_10(long double x){
-	return log(x)/log(10);
+void winResized(Allegro* allegro, void* context, uint16_t ev, int w, int h){
+	allegro->getGUI()->input_boxes[stimeInptbx_index].y = h-50;
+	allegro->getGUI()->buttons[triggerBtn_index].y = h-50;
+	//allegro->getGUI()->input_boxes[stimeInptbx_index].x = allegro->getDisplayHeight()-35;
 }
 
-
-
-unsigned f_index = 0;
-unsigned df_index = 0;
-unsigned integf_index = 0;
-
-void update_func(Allegro* allegro, InputBox* inptbx){
-	Window* win = (Window*)allegro->getContext();
-	string y = inptbx->text;
-	
-	try{
-		win->setFunction(f_index, Function(MathExpression(y), string("y=").append(y)));
-		win->setFunction(df_index, Function(MathExpression(y), string("y=").append(y)).derivee());
-		win->setFunction(integf_index, Function(MathExpression(y), string("y=").append(y)).primitive(0.01));
+void animate(Allegro* allegro, float FPS){
+	if(!update || paused)
+		return;
 		
-	}catch(...){
-		cout << "Bad !" << endl;
+	if(osc->getN() < 100)
+		return;
+		
+	Window* win = (Window*)allegro->getContext();
+	win->setScatter(oscilloscope_index, *osc);
+	Pmin = osc->getMin();
+	Pmax = osc->getMax();
+	avg = osc->getAverage();
+	periode = osc->getPeriod();
+	update = false;
+}
+
+void updatePts(){
+	while(!stop){
+		osc->updatePoints();
+		update = true;
+		this_thread::sleep_for(chrono::microseconds(100000));
 	}
 }
 
-void toggle_integ(Allegro* allegro, Button* btn){
+void changeSampleTime(Allegro* allegro, InputBox* inptbx){
+	serial::Serial* arduino = osc->arduino;
 	Window* win = (Window*)allegro->getContext();
 	
-	win->toggleHideFunction(integf_index);
+	int stime = stoi(inptbx->text, nullptr, 10);
+	if(stime > 10e7 || stime < 10e2)
+		return;
+		
+	win->setXmax(stime);
+	stringstream ss;
+	ss << "#" << stime;
+	arduino->write(ss.str());
+	cout << "Changed sample time to " << stime << endl;
 }
 
-unsigned inpt_id = 0;
-unsigned tgl_integ_id = 0;
-
-void winResized(Allegro* allegro, void* context, uint16_t ev, int w, int h){
-	InputBox* formula = &(allegro->getGUI()->input_boxes[inpt_id-1]);
-	formula->y = allegro->getDisplayHeight()-35;
-	formula->width = (int)(allegro->getDisplayWidth()*0.8);
+void toggleTrigger(Allegro* allegro, Button* btn){
+	serial::Serial* arduino = osc->arduino;
+	//Window* win = (Window*)allegro->getContext();
+	if(osc->triggered)
+		btn->name = "Untriggered";
+	else
+		btn->name = "Triggered";
 	
-	cout << tgl_integ_id << endl;
-	Button* btn = &(allegro->getGUI()->buttons[tgl_integ_id-1]);
-	btn->y = allegro->getDisplayHeight()-35;
-	btn->x = (int)(allegro->getDisplayWidth()*0.8)+5;
-	btn->width = (int)(allegro->getDisplayWidth()*0.1);
+	arduino->write("!!");
+	cout << "Toggled trigger" << endl;
 }
 
 int main(int argc, char **argv)
@@ -452,47 +526,18 @@ int main(int argc, char **argv)
 	Allegro allegro_obj = Allegro();
 	Allegro* allegro = &allegro_obj;
 	
-//	Allegro test = Allegro();
-//	Allegro* test_ptr = &test;
 	
-	
-	Window window(allegro, -6, 6, -5, 5);
+	Window window(allegro, -3, 1000, -5, 5);
 	window.setStep(0.01);
 	
-//	window.addFunction(Function(function<long double(long double)>(
-//	[=](long double x){
-//		return 0.5*x*x;
-//		}
-//	)));
-//	window.addFunction(Function(&f2).primitive(0.001));
-//	window.addFunction(Function(&triangle).derivee(0.001));
-
-	//window.addFunction(Function(function<long double(long double)>([=](long double x){return x*x-1;})));
-//	Function f(&log);
-//	//f.selected = true;
-//	window.addFunction(Function(&sigmoide, "sigmoide"));
-//	window.addFunction(f.derivee(0.001));
-//	window.addFunction(Function(&log_10, "log"));
-//	window.addFunction(Function(&exp, "exp"));
-//	window.addFunction(Function(&cos, "cos(x)"));
-//	window.addFunction(Function(&cos, "cos(x)").primitive(0.01));
-//	window.addFunction(Function(&cos, "cos(x)").tangente(3));
-//	window.addFunction(Function(function<long double(long double)>([=](long double x){return x;})));
-
-	ScatterPlot test;
-	test.addPoint(0, 2);
-	test.addPoint(3, 0.5);
-	test.addPoint(1, 0.7);
-	unsigned test_index = window.addScatter(test);
-
-
-	string y = "x^2";
-
-	f_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)));
-	df_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).derivee());
-	integf_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).primitive(0.01));
+	Oscilloscope oscillo("/dev/ttyACM0");
+	osc = &oscillo;
 	
-	//window.addFunction(Function(MathExpression("sin x"), "test"));
+	oscillo.updatePoints();
+	
+	window.addScatter(oscillo);
+	
+	std::thread bg(updatePts);
 	
 	allegro->setContext((void*)(&window));
 	
@@ -501,18 +546,23 @@ int main(int argc, char **argv)
 	//allegro->createWindow(30, 500, 400);
 	
 	allegro->setRedrawFunction(&redraw);
+	allegro->setAnimateFunction(&animate);
 	allegro->bindMouseMove(&mouseMove);
 	allegro->bindMouseClick(&mouseClick);
 	allegro->bindKeyDown(&key);
 	allegro->bindWindowResized(&winResized);
 	
+	InputBox stimeBox(allegro, "1000", 230, allegro->getDisplayHeight()-50, 30, 100, &changeSampleTime);
+	stimeBox.authorized_chars = "0123456789";
+	allegro->getGUI()->input_boxes.push_back(stimeBox);
+	stimeInptbx_index = allegro->getGUI()->input_boxes.size()-1;
 	
-	inpt_id = allegro->getGUI()->newInputBox(y, 3, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.8), &update_func)->id;
-	//cout << inpt_id << endl;
-	allegro->getGUI()->input_boxes[0].setAuthorizedChars("01234567890.+-/^*x() ");
-	
-	tgl_integ_id = allegro->getGUI()->newBtn("Primitive", (int)(allegro->getDisplayWidth()*0.8)+5, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.1), &toggle_integ)->id;
+	allegro->getGUI()->newBtn("Untriggered", 340, allegro->getDisplayHeight()-50, 30, 50, &toggleTrigger);
+	triggerBtn_index = allegro->getGUI()->buttons.size()-1;
 	
 	allegro->gameLoop();
+	
+	stop = true;
+	bg.join();
 	return 0;
 }

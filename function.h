@@ -16,16 +16,6 @@ public:
 		name = nme;
 	}
 	
-	Function(const MathExpression& mexp, string nme = ""){
-		object = true;
-		f_obj = [=](long double x){
-			MathExpression m = mexp;
-			return m.calculateElementStack(x);
-		};
-		
-		name = nme;
-	}
-	
 	Function derivee(const long double set_pas = 0.05){
 		function<long double(long double)> f;
 		if(object){
