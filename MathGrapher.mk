@@ -5,15 +5,15 @@
 ## Release
 ProjectName            :=MathGrapher
 ConfigurationName      :=Release
-WorkspacePath          :=/home/aviallon/Documents/dev
+WorkspacePath          :=/home/aviallon/Documents/TIPE/DronePilot
 ProjectPath            :=/home/aviallon/Documents/dev/MathGrapher
 IntermediateDirectory  :=./Release
 OutDir                 := $(IntermediateDirectory)
 CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
-User                   :=
-Date                   :=04/26/18
+User                   :=Antoine Viallon
+Date                   :=10/29/18
 CodeLitePath           :=/home/aviallon/.codelite
 LinkerName             :=/usr/bin/g++
 SharedObjectLinkerName :=/usr/bin/g++ -shared -fPIC
@@ -35,7 +35,7 @@ PreprocessOnlySwitch   :=-E
 ObjectsFileList        :="MathGrapher.txt"
 PCHCompileFlags        :=
 MakeDirCommand         :=mkdir -p
-LinkOptions            := -fopenmp -Wl,--format=binary -Wl,allegro/fonts/Arimo-Regular.ttf -Wl,--format=default
+LinkOptions            := -fopenmp -Wl,--format=binary -Wl,allegro/fonts/Arimo-Regular.ttf -Wl,--format=default 
 IncludePath            :=  $(IncludeSwitch). $(IncludeSwitch). 
 IncludePCH             := 
 RcIncludePath          := 
@@ -50,7 +50,7 @@ LibPath                := $(LibraryPathSwitch).
 AR       := /usr/bin/ar rcu
 CXX      := /usr/bin/g++
 CC       := /usr/bin/gcc
-CXXFLAGS := -O3 -fexpensive-optimizations -fopenmp -std=c++14 -O2 -Wall $(Preprocessors)
+CXXFLAGS := -fopenmp -std=c++14 -O2 -Wall $(Preprocessors)
 CFLAGS   :=  -O2 -Wall $(Preprocessors)
 ASFLAGS  := 
 AS       := /usr/bin/as
@@ -60,7 +60,7 @@ AS       := /usr/bin/as
 ## User defined environment variables
 ##
 CodeLiteDir:=/usr/share/codelite
-Objects0=$(IntermediateDirectory)/main.cpp$(ObjectSuffix) $(IntermediateDirectory)/allegro_gui.cpp$(ObjectSuffix) $(IntermediateDirectory)/allegro_allegro.cpp$(ObjectSuffix) $(IntermediateDirectory)/allegro_mouse.cpp$(ObjectSuffix) 
+Objects0=$(IntermediateDirectory)/allegro_gui.cpp$(ObjectSuffix) $(IntermediateDirectory)/main.cpp$(ObjectSuffix) $(IntermediateDirectory)/allegro_allegro.cpp$(ObjectSuffix) $(IntermediateDirectory)/allegro_mouse.cpp$(ObjectSuffix) 
 
 
 
@@ -91,14 +91,6 @@ PreBuild:
 ##
 ## Objects
 ##
-$(IntermediateDirectory)/main.cpp$(ObjectSuffix): main.cpp $(IntermediateDirectory)/main.cpp$(DependSuffix)
-	$(CXX) $(IncludePCH) $(SourceSwitch) "/home/aviallon/Documents/dev/MathGrapher/main.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/main.cpp$(ObjectSuffix) $(IncludePath)
-$(IntermediateDirectory)/main.cpp$(DependSuffix): main.cpp
-	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/main.cpp$(ObjectSuffix) -MF$(IntermediateDirectory)/main.cpp$(DependSuffix) -MM main.cpp
-
-$(IntermediateDirectory)/main.cpp$(PreprocessSuffix): main.cpp
-	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/main.cpp$(PreprocessSuffix) main.cpp
-
 $(IntermediateDirectory)/allegro_gui.cpp$(ObjectSuffix): allegro/gui.cpp $(IntermediateDirectory)/allegro_gui.cpp$(DependSuffix)
 	$(CXX) $(IncludePCH) $(SourceSwitch) "/home/aviallon/Documents/dev/MathGrapher/allegro/gui.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/allegro_gui.cpp$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/allegro_gui.cpp$(DependSuffix): allegro/gui.cpp
@@ -106,6 +98,14 @@ $(IntermediateDirectory)/allegro_gui.cpp$(DependSuffix): allegro/gui.cpp
 
 $(IntermediateDirectory)/allegro_gui.cpp$(PreprocessSuffix): allegro/gui.cpp
 	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/allegro_gui.cpp$(PreprocessSuffix) allegro/gui.cpp
+
+$(IntermediateDirectory)/main.cpp$(ObjectSuffix): main.cpp $(IntermediateDirectory)/main.cpp$(DependSuffix)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "/home/aviallon/Documents/dev/MathGrapher/main.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/main.cpp$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/main.cpp$(DependSuffix): main.cpp
+	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/main.cpp$(ObjectSuffix) -MF$(IntermediateDirectory)/main.cpp$(DependSuffix) -MM main.cpp
+
+$(IntermediateDirectory)/main.cpp$(PreprocessSuffix): main.cpp
+	$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/main.cpp$(PreprocessSuffix) main.cpp
 
 $(IntermediateDirectory)/allegro_allegro.cpp$(ObjectSuffix): allegro/allegro.cpp $(IntermediateDirectory)/allegro_allegro.cpp$(DependSuffix)
 	$(CXX) $(IncludePCH) $(SourceSwitch) "/home/aviallon/Documents/dev/MathGrapher/allegro/allegro.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/allegro_allegro.cpp$(ObjectSuffix) $(IncludePath)

@@ -275,8 +275,8 @@ public:
 		selectedFunction = i;
 	}
 	
-	void toggleHideFunction(unsigned i){
-		functions[i].hidden = not(functions[i].hidden);
+	void hideFunction(unsigned i, bool val){
+		functions[i].hidden = val;
 	}
 	
 	void reinitFunction(unsigned i){
@@ -412,39 +412,61 @@ unsigned f_index = 0;
 unsigned df_index = 0;
 unsigned integf_index = 0;
 
+bool integ = true;
+bool deriv = true;
+
 void update_func(Allegro* allegro, InputBox* inptbx){
 	Window* win = (Window*)allegro->getContext();
 	string y = inptbx->text;
 	
 	try{
 		win->setFunction(f_index, Function(MathExpression(y), string("y=").append(y)));
+		
 		win->setFunction(df_index, Function(MathExpression(y), string("y=").append(y)).derivee());
+		win->hideFunction(df_index, deriv);
+		
 		win->setFunction(integf_index, Function(MathExpression(y), string("y=").append(y)).primitive(0.01));
+		win->hideFunction(integf_index, integ);
 		
 	}catch(...){
-		cout << "Bad !" << endl;
+		cout << "Parsing error !" << endl;
 	}
 }
 
 void toggle_integ(Allegro* allegro, Button* btn){
 	Window* win = (Window*)allegro->getContext();
 	
-	win->toggleHideFunction(integf_index);
+	integ = !integ;
+	win->hideFunction(integf_index, integ);
+}
+
+void toggle_deriv(Allegro* allegro, Button* btn){
+	Window* win = (Window*)allegro->getContext();
+	
+	deriv = !deriv;
+	win->hideFunction(df_index, deriv);
 }
 
 unsigned inpt_id = 0;
 unsigned tgl_integ_id = 0;
+unsigned tgl_deriv_id = 0;
 
 void winResized(Allegro* allegro, void* context, uint16_t ev, int w, int h){
 	InputBox* formula = &(allegro->getGUI()->input_boxes[inpt_id-1]);
 	formula->y = allegro->getDisplayHeight()-35;
 	formula->width = (int)(allegro->getDisplayWidth()*0.8);
 	
-	cout << tgl_integ_id << endl;
+	//cout << tgl_integ_id << endl;
 	Button* btn = &(allegro->getGUI()->buttons[tgl_integ_id-1]);
 	btn->y = allegro->getDisplayHeight()-35;
 	btn->x = (int)(allegro->getDisplayWidth()*0.8)+5;
-	btn->width = (int)(allegro->getDisplayWidth()*0.1);
+	btn->width = (int)(allegro->getDisplayWidth()*0.08);
+	
+	//cout << tgl_integ_id << endl;
+	btn = &(allegro->getGUI()->buttons[tgl_deriv_id-1]);
+	btn->y = allegro->getDisplayHeight()-35;
+	btn->x = (int)(allegro->getDisplayWidth()*0.88)+5+5;
+	btn->width = (int)(allegro->getDisplayWidth()*0.08);
 }
 
 int main(int argc, char **argv)
@@ -479,18 +501,22 @@ int main(int argc, char **argv)
 //	window.addFunction(Function(&cos, "cos(x)").tangente(3));
 //	window.addFunction(Function(function<long double(long double)>([=](long double x){return x;})));
 
-	ScatterPlot test;
-	test.addPoint(0, 2);
-	test.addPoint(3, 0.5);
-	test.addPoint(1, 0.7);
-	unsigned test_index = window.addScatter(test);
+//	ScatterPlot test;
+//	test.addPoint(0, 2);
+//	test.addPoint(3, 0.5);
+//	test.addPoint(1, 0.7);
+//	unsigned test_index = window.addScatter(test);
 
 
-	string y = "x^2";
+	string y = "sin(x)";
 
 	f_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)));
+	
 	df_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).derivee());
+	window.hideFunction(df_index, deriv);
+	
 	integf_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).primitive(0.01));
+	window.hideFunction(integf_index, integ);
 	
 	//window.addFunction(Function(MathExpression("sin x"), "test"));
 	
@@ -509,9 +535,10 @@ int main(int argc, char **argv)
 	
 	inpt_id = allegro->getGUI()->newInputBox(y, 3, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.8), &update_func)->id;
 	//cout << inpt_id << endl;
-	allegro->getGUI()->input_boxes[0].setAuthorizedChars("01234567890.+-/^*x() ");
+	allegro->getGUI()->input_boxes[0].setAuthorizedChars("01234567890.+-/^*%abcdefghijklmnopqrstuvwxyz() ");
 	
-	tgl_integ_id = allegro->getGUI()->newBtn("Primitive", (int)(allegro->getDisplayWidth()*0.8)+5, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.1), &toggle_integ)->id;
+	tgl_integ_id = allegro->getGUI()->newBtn("Primitive", (int)(allegro->getDisplayWidth()*0.8)+5, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.08), &toggle_integ)->id;
+	tgl_deriv_id = allegro->getGUI()->newBtn("Dérivée", (int)(allegro->getDisplayWidth()*0.88)+5+5, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.08), &toggle_deriv)->id;
 	
 	allegro->gameLoop();
 	return 0;

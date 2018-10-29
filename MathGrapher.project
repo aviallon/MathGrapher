@@ -2,7 +2,7 @@
 <CodeLite_Project Name="MathGrapher" Version="10.0.0" InternalType="Console">
   <Plugins>
     <Plugin Name="qmake">
-      <![CDATA[00010001N0007Release000000000000]]>
+      <![CDATA[00020001N0005Debug0000000000000001N0007Release000000000000]]>
     </Plugin>
   </Plugins>
   <Description/>
@@ -23,11 +23,18 @@
   </VirtualDirectory>
   <Settings Type="Executable">
     <GlobalSettings>
-      <Compiler Options="-O3;-fexpensive-optimizations;-fopenmp;-std=c++14" C_Options="" Assembler="">
+      <Compiler Options="-fopenmp;-std=c++14" C_Options="" Assembler="">
         <IncludePath Value="."/>
       </Compiler>
-      <Linker Options="-fopenmp">
+      <Linker Options="-fopenmp;-Wl,--format=binary -Wl,allegro/fonts/Arimo-Regular.ttf -Wl,--format=default">
         <LibraryPath Value="."/>
+        <Library Value="allegro"/>
+        <Library Value="allegro_image"/>
+        <Library Value="allegro_primitives"/>
+        <Library Value="allegro_memfile"/>
+        <Library Value="allegro_ttf"/>
+        <Library Value="allegro_font"/>
+        <Library Value="allegro_dialog"/>
       </Linker>
       <ResourceCompiler Options=""/>
     </GlobalSettings>
@@ -75,15 +82,7 @@
         <IncludePath Value="."/>
         <Preprocessor Value="NDEBUG"/>
       </Compiler>
-      <Linker Options="-Wl,--format=binary -Wl,allegro/fonts/Arimo-Regular.ttf -Wl,--format=default" Required="yes">
-        <Library Value="allegro"/>
-        <Library Value="allegro_image"/>
-        <Library Value="allegro_primitives"/>
-        <Library Value="allegro_memfile"/>
-        <Library Value="allegro_ttf"/>
-        <Library Value="allegro_font"/>
-        <Library Value="allegro_dialog"/>
-      </Linker>
+      <Linker Options="" Required="yes"/>
       <ResourceCompiler Options="" Required="no"/>
       <General OutputFile="$(IntermediateDirectory)/$(ProjectName)" IntermediateDirectory="./Release" Command="./$(ProjectName)" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes" IsGUIProgram="no" IsEnabled="yes"/>
       <BuildSystem Name="Default"/>
