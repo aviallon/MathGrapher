@@ -1,7 +1,7 @@
 #ifndef SCATTERPLOT_H
 #define SCATTERPLOT_H
 
-#include <vector>
+#include "includes.h"
 
 struct Point{
 public:

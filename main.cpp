@@ -1,20 +1,6 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <string>
-#include <cmath>
-#include <cstdio>
-#include <utility>
-#include <functional>
-#include <random>
-#include "allegro/allegro.h"
-#include "mathparser.h"
-#include "function.h"
-#include "scatterplot.h"
+#include "includes.h"
 
 using namespace std;
-
-const double PI = asin(1)*2;
 
 class Window{
 protected:
@@ -36,6 +22,22 @@ protected:
 		allegro->draw_line(x-s/2 - 1, y, x+s/2, y, color.toAllegro(), width);
 		allegro->draw_line(x, y-s/2 - 1, x, y+s/2, color.toAllegro(), width);
 	}
+	
+	long double antecedent(unsigned i, long double y, long double x0){
+		long double x = x0;
+		Function f_eq(func_ld(
+		[=](long double x){
+			return functions[i](x)-y;
+		}
+		), "feq");
+		for(unsigned i=0; i<4; i++){
+			long double dfx = f_eq.derivee()(x);
+			if(dfx == 0)
+				dfx = 10e-8;
+			x = x - f_eq(x)/dfx;
+		}
+		return x;
+	}
 public:
 	Window(Allegro* allegro, long double x_min = -5, long double x_max = 5, long double y_min = -5, long double y_max = 5){
 		this->x_min = x_min;
@@ -53,10 +55,13 @@ public:
 		colorWheel.push_back(Color(128, 128, 128));
 	}
 	
-	unsigned addFunction(Function f){
+	unsigned addFunction(Function f, bool noInit = false){
 		cout << "Adding function " << functions.size()+1 << "..." << endl << "\tCalculating values...";
 		cout.flush();
-		f.initValues(x_min, x_max, pas);
+		if(!noInit){
+			f.initValues(x_min, x_max, pas);
+		}
+		f.hidden = noInit;
 		cout << " Done!" << endl;
 		functions.push_back(f);
 		return functions.size()-1;
@@ -67,10 +72,13 @@ public:
 		return scatter.size()-1;
 	}
 	
-	void setFunction(unsigned i, Function f){
+	void setFunction(unsigned i, Function f, bool noInit = false){
 		cout << "Changing function " << i << "..." << endl << "\tCalculating values...";
 		cout.flush();
-		f.initValues(x_min, x_max, pas);
+		if(!noInit){
+			f.initValues(x_min, x_max, pas);
+		}
+		f.hidden = noInit;
 		cout << " Done!" << endl;
 		functions[i]=f;
 	}
@@ -251,15 +259,28 @@ public:
 		return pas;
 	}
 	
-	int getFunctionNearestPoint(pair<long double, long double> point){
+	
+	
+	int getFunctionNearestPoint(pair<long double, long double> point, bool fast=true){
 		pair<long double, int> nearestFunc;
 		nearestFunc.second = -1;
-		for(unsigned i = 0; i < functions.size(); i++){
-			long double val = functions[i](point.first);
-			long double e = abs(point.second - val);
-			if(e < 0.5){
-				nearestFunc.first = e;
-				nearestFunc.second = i;
+		nearestFunc.first = 1;
+		if(fast){
+			for(unsigned i = 0; i < functions.size(); i++){
+				long double val = functions[i](point.first);
+				long double e = abs(point.second - val);
+				if(e < 0.5 and e < nearestFunc.first){
+					nearestFunc.first = e;
+					nearestFunc.second = i;
+				}
+			}
+		} else {
+			for(unsigned i = 0; i < functions.size(); i++){
+				long double distance = sqrt(pow((functions[i](point.first) - point.second), 2) + pow(point.first - antecedent(i, point.second, point.first), 2));
+				if(distance < 0.5 and distance < nearestFunc.first){
+					nearestFunc.first = distance;
+					nearestFunc.second = i;
+				}
 			}
 		}
 		return nearestFunc.second;
@@ -277,6 +298,9 @@ public:
 	
 	void hideFunction(unsigned i, bool val){
 		functions[i].hidden = val;
+		if(!functions[i].initialized && val != true){
+			functions[i].initValues(x_min, x_max, pas);
+		}
 	}
 	
 	void reinitFunction(unsigned i){
@@ -286,7 +310,10 @@ public:
 	void reinitAllFunctions(){
 		pas = max(pas_original*abs((long double)(x_max - x_min))/11, (long double)0.001);
 		for(unsigned i = 0; i<functions.size(); i++){
-			reinitFunction(i);
+			if(!functions[i].hidden)
+				reinitFunction(i);
+			else
+				functions[i].initialized = false;
 		}
 	}
 	
@@ -300,15 +327,27 @@ public:
 		origine.first = (x_min + x_max)/2;
 		origine.second = (y_min + y_max)/2;
 		
-		pair<long double, long double> new_origine;
-		new_origine.first = (4*origine.first + point.first)/5;
-		new_origine.second = (4*origine.second + point.second)/5;
-		
 		x_min = (x_min)*coeff;
 		x_max = (x_max)*coeff;
 		
 		y_min = (y_min)*coeff;
 		y_max = (y_max)*coeff;
+	}
+	
+	void moveTo(pair<long double, long double> point){
+		pair<long double, long double> origine;
+		origine.first = (x_min + x_max)/2;
+		origine.second = (y_min + y_max)/2;
+		
+		pair<long double, long double> new_origine;
+		new_origine.first = (origine.first + point.first)/2;
+		new_origine.second = (origine.second + point.second)/2;
+		
+		x_min += new_origine.first-origine.first;
+		x_max += new_origine.first-origine.first;
+		
+		y_min += new_origine.second-origine.second;
+		y_max += new_origine.second-origine.second;
 	}
 	
 	int disp_width = 100;
@@ -318,7 +357,8 @@ public:
 };
 
 void redraw(Allegro* allegro, float fps){
-	allegro->draw_rectangle(0, 0, allegro->getDisplayWidth(), allegro->getDisplayHeight(), allegro->rgb(255, 255, 255), 1, true);
+	allegro->clearScreen();
+	//allegro->draw_rectangle(0, 0, allegro->getDisplayWidth(), allegro->getDisplayHeight(), allegro->rgb(255, 255, 255), 1, true);
 	
 	Window* win = (Window*)allegro->getContext();
 	
@@ -354,11 +394,26 @@ void mouseMove(Allegro* allegro, void* context, uint16_t event, int x, int y){
 	}
 }
 
+unsigned inpt_id = 0;
+unsigned tgl_integ_id = 0;
+unsigned tgl_deriv_id = 0;
+
+unsigned f_index = 0;
+unsigned df_index = 0;
+unsigned integf_index = 0;
+
+bool integ = false;
+bool deriv = false;
+
 void mouseClick(Allegro* allegro, void* context, uint16_t event, int x, int y){
 	Window* win = (Window*)allegro->getContext();
 	if(event & Allegro::MOUSE_L_CLICKED && event & Allegro::MOUSE_DOWN){
-		int select = win->getFunctionNearestPoint(win->getMousePoint());
-		win->selectFunction(select);
+		if(allegro->isKeyDown(ALLEGRO_KEY_LCTRL)){
+			win->moveTo(win->pixelToPoint(x, y));
+		} else {
+			int select = win->getFunctionNearestPoint(win->getMousePoint());
+			win->selectFunction(select);
+		}
 		
 		//cout << select << endl;
 	}
@@ -369,6 +424,11 @@ void key(Allegro* allegro, void* context, uint16_t ev, uint8_t keycode){
 	if(ev & Allegro::KEY_DOWN){
 		if(allegro->isKeyDown(ALLEGRO_KEY_LCTRL) && keycode == ALLEGRO_KEY_R){
 			win->reinitAllFunctions();
+		}
+		if(allegro->isKeyDown(ALLEGRO_KEY_LSHIFT) && keycode == ALLEGRO_KEY_A){
+			string func = allegro->getGUI()->input_boxes[inpt_id].text;
+			MathExpression fonction(func, true);
+			fonction.addToUserFunction();
 		}
 	}
 }
@@ -406,27 +466,16 @@ long double log_10(long double x){
 	return log(x)/log(10);
 }
 
-
-
-unsigned f_index = 0;
-unsigned df_index = 0;
-unsigned integf_index = 0;
-
-bool integ = true;
-bool deriv = true;
-
 void update_func(Allegro* allegro, InputBox* inptbx){
 	Window* win = (Window*)allegro->getContext();
 	string y = inptbx->text;
 	
 	try{
-		win->setFunction(f_index, Function(MathExpression(y), string("y=").append(y)));
+		win->setFunction(f_index, Function(MathExpression(y), string("y=").append(y)), false);
 		
-		win->setFunction(df_index, Function(MathExpression(y), string("y=").append(y)).derivee());
-		win->hideFunction(df_index, deriv);
+		win->setFunction(df_index, Function(MathExpression(y), string("y=").append(y)).derivee(), !deriv);
 		
-		win->setFunction(integf_index, Function(MathExpression(y), string("y=").append(y)).primitive(0.01));
-		win->hideFunction(integf_index, integ);
+		win->setFunction(integf_index, Function(MathExpression(y), string("y=").append(y)).primitive(0.01), !integ);
 		
 	}catch(...){
 		cout << "Parsing error !" << endl;
@@ -437,33 +486,29 @@ void toggle_integ(Allegro* allegro, Button* btn){
 	Window* win = (Window*)allegro->getContext();
 	
 	integ = !integ;
-	win->hideFunction(integf_index, integ);
+	win->hideFunction(integf_index, !integ);
 }
 
 void toggle_deriv(Allegro* allegro, Button* btn){
 	Window* win = (Window*)allegro->getContext();
 	
 	deriv = !deriv;
-	win->hideFunction(df_index, deriv);
+	win->hideFunction(df_index, !deriv);
 }
 
-unsigned inpt_id = 0;
-unsigned tgl_integ_id = 0;
-unsigned tgl_deriv_id = 0;
-
 void winResized(Allegro* allegro, void* context, uint16_t ev, int w, int h){
-	InputBox* formula = &(allegro->getGUI()->input_boxes[inpt_id-1]);
+	InputBox* formula = &(allegro->getGUI()->input_boxes[inpt_id]);
 	formula->y = allegro->getDisplayHeight()-35;
 	formula->width = (int)(allegro->getDisplayWidth()*0.8);
 	
 	//cout << tgl_integ_id << endl;
-	Button* btn = &(allegro->getGUI()->buttons[tgl_integ_id-1]);
+	Button* btn = &(allegro->getGUI()->buttons[tgl_integ_id]);
 	btn->y = allegro->getDisplayHeight()-35;
 	btn->x = (int)(allegro->getDisplayWidth()*0.8)+5;
 	btn->width = (int)(allegro->getDisplayWidth()*0.08);
 	
 	//cout << tgl_integ_id << endl;
-	btn = &(allegro->getGUI()->buttons[tgl_deriv_id-1]);
+	btn = &(allegro->getGUI()->buttons[tgl_deriv_id]);
 	btn->y = allegro->getDisplayHeight()-35;
 	btn->x = (int)(allegro->getDisplayWidth()*0.88)+5+5;
 	btn->width = (int)(allegro->getDisplayWidth()*0.08);
@@ -471,6 +516,8 @@ void winResized(Allegro* allegro, void* context, uint16_t ev, int w, int h){
 
 int main(int argc, char **argv)
 {
+	Allegro::init();
+	
 	Allegro allegro_obj = Allegro();
 	Allegro* allegro = &allegro_obj;
 	
@@ -481,7 +528,7 @@ int main(int argc, char **argv)
 	Window window(allegro, -6, 6, -5, 5);
 	window.setStep(0.01);
 	
-//	window.addFunction(Function(function<long double(long double)>(
+//	window.addFunction(Function(func_ld(
 //	[=](long double x){
 //		return 0.5*x*x;
 //		}
@@ -489,7 +536,7 @@ int main(int argc, char **argv)
 //	window.addFunction(Function(&f2).primitive(0.001));
 //	window.addFunction(Function(&triangle).derivee(0.001));
 
-	//window.addFunction(Function(function<long double(long double)>([=](long double x){return x*x-1;})));
+	//window.addFunction(Function(func_ld([=](long double x){return x*x-1;})));
 //	Function f(&log);
 //	//f.selected = true;
 //	window.addFunction(Function(&sigmoide, "sigmoide"));
@@ -499,9 +546,10 @@ int main(int argc, char **argv)
 //	window.addFunction(Function(&cos, "cos(x)"));
 //	window.addFunction(Function(&cos, "cos(x)").primitive(0.01));
 //	window.addFunction(Function(&cos, "cos(x)").tangente(3));
-//	window.addFunction(Function(function<long double(long double)>([=](long double x){return x;})));
+//	window.addFunction(Function(func_ld([=](long double x){return x;})));
 
 //	ScatterPlot test;
+//	test.joinPoints = true;
 //	test.addPoint(0, 2);
 //	test.addPoint(3, 0.5);
 //	test.addPoint(1, 0.7);
@@ -510,21 +558,17 @@ int main(int argc, char **argv)
 
 	string y = "sin(x)";
 
-	f_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)));
+	f_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)), false);
 	
-	df_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).derivee());
-	window.hideFunction(df_index, deriv);
+	df_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).derivee(), !deriv);
 	
-	integf_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).primitive(0.01));
-	window.hideFunction(integf_index, integ);
+	integf_index = window.addFunction(Function(MathExpression(y), string("y=").append(y)).primitive(0.01), !integ);
 	
 	//window.addFunction(Function(MathExpression("sin x"), "test"));
 	
 	allegro->setContext((void*)(&window));
 	
-	allegro->init();
-	allegro->createWindow(30, 500, 400);
-	//allegro->createWindow(30, 500, 400);
+	allegro->createWindow(30, 500, 400, ALLEGRO_WINDOWED | ALLEGRO_RESIZABLE);
 	
 	allegro->setRedrawFunction(&redraw);
 	allegro->bindMouseMove(&mouseMove);
@@ -533,13 +577,13 @@ int main(int argc, char **argv)
 	allegro->bindWindowResized(&winResized);
 	
 	
-	inpt_id = allegro->getGUI()->newInputBox(y, 3, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.8), &update_func)->id;
+	inpt_id = allegro->getGUI()->newInputBox(y, 3, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.8), &update_func);
 	//cout << inpt_id << endl;
-	allegro->getGUI()->input_boxes[0].setAuthorizedChars("01234567890.+-/^*%abcdefghijklmnopqrstuvwxyz() ");
+	allegro->getGUI()->input_boxes[inpt_id].setAuthorizedChars("01234567890.+-/^*%abcdefghijklmnopqrstuvwxyzPI() ");
 	
-	tgl_integ_id = allegro->getGUI()->newBtn("Primitive", (int)(allegro->getDisplayWidth()*0.8)+5, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.08), &toggle_integ)->id;
-	tgl_deriv_id = allegro->getGUI()->newBtn("Dérivée", (int)(allegro->getDisplayWidth()*0.88)+5+5, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.08), &toggle_deriv)->id;
+	tgl_integ_id = allegro->getGUI()->newBtn("Primitive", (int)(allegro->getDisplayWidth()*0.8)+5, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.08), &toggle_integ);
+	tgl_deriv_id = allegro->getGUI()->newBtn("Dérivée", (int)(allegro->getDisplayWidth()*0.88)+5+5, allegro->getDisplayHeight()-35, 30, (int)(allegro->getDisplayWidth()*0.08), &toggle_deriv);
 	
-	allegro->gameLoop();
+	Allegro::startLoop();
 	return 0;
 }

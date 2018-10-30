@@ -1,15 +1,4 @@
-#include <algorithm>
-#include <cmath>
-#include <random>
-#include <string>
-#include <vector>
-#include <stack>
-#include <regex>
-#include <map>
-#include <chrono>
-#include <functional>
-#include <cstdlib>
-#include <ctime>
+#include "includes.h"
 
 using namespace std;
 
@@ -70,7 +59,8 @@ template<typename T> void print_vec(vector<T>& dvec){
 class MathExpression{
 private:
 	static map<string,int> operators_prec;
-	static map<string,function<long double(long double)> > functions;
+	static map<string,func_ld > functions;
+	static map<string,func_ld > user_functions;
 	static map<string,long double> constantes;
 	static void init(){
 		if(initialized)
@@ -87,61 +77,69 @@ private:
 		operators_prec["("] = 0;
 		
 		// initialize functions
-		functions["sin"] = function<long double(long double)>(
+		functions["sin"] = func_ld(
 			[=](long double x){
 				return sin(x);
 			}
 		);
-		functions["cos"] = function<long double(long double)>(
+		functions["cos"] = func_ld(
 			[=](long double x){
 				return cos(x);
 			}
 		);
-		functions["tan"] = function<long double(long double)>(
+		functions["tan"] = func_ld(
 			[=](long double x){
 				return tan(x);
 			}
 		);
-		functions["acos"] = function<long double(long double)>(
+		functions["acos"] = func_ld(
 			[=](long double x){
 				return acos(x);
 			}
 		);
-		functions["asin"] = function<long double(long double)>(
+		functions["asin"] = func_ld(
 			[=](long double x){
 				return asin(x);
 			}
 		);
-		functions["atan"] = function<long double(long double)>(
+		functions["atan"] = func_ld(
 			[=](long double x){
 				return atan(x);
 			}
 		);
-		functions["sqrt"] = function<long double(long double)>(
+		functions["sqrt"] = func_ld(
 			[=](long double x){
 				return sqrt(x);
 			}
 		);
-		functions["exp"] = function<long double(long double)>(
+		functions["exp"] = func_ld(
 			[=](long double x){
 				return exp(x);
 			}
 		);
-		functions["ln"] = function<long double(long double)>(
+		functions["ln"] = func_ld(
 			[=](long double x){
 				return log(x);
 			}
 		);
-		functions["abs"] = function<long double(long double)>(
+		functions["abs"] = func_ld(
 			[=](long double x){
 				return abs(x);
 			}
 		);
-		functions["rand"] = function<long double(long double)>(
+		functions["floor"] = func_ld(
+			[=](long double x){
+				return floor(x);
+			}
+		);
+		functions["rand"] = func_ld(
 			[=](long double x){
 				return static_cast<long double> (rand()) / static_cast<long double> (RAND_MAX);
 			}
 		);
+		
+		constantes["e"] = exp(1);
+		constantes["PI"] = PI;
 		
 		initialized = true;
 	}
@@ -150,13 +148,16 @@ public:
 	MathExpression(string exprStr, bool parseNow = true){
 		init();
 		expr = exprStr;
-		vector<string> splitted = resplit(exprStr, "[^0-9a-zPI.]|[ \\(\\)]");
-		print_vec(splitted);
 		if(parseNow){
+			vector<string> splitted = resplit(exprStr, "[^0-9a-zPI.]|[ \\(\\)]");
+			//print_vec(splitted);
 			expr_stack = splitted;
+			fix_implicit_substraction();
 			shunting_yard2();
 			printf("NPI : ");
 			print_vec(npi_stack);
+			//addToUserFunction();
+			//printf("New user function : f%d\n", int(user_functions.size()));
 			//printf("f(2) = %f\n", float(npi(npi_stack, 2)));
 		}
 	}
@@ -167,28 +168,46 @@ public:
 //		iss >> noskipws >> f;
 //		return iss.eof() && !iss.fail();
 //	}
+	void addToUserFunction(){
+		stringstream ss;
+		ss << "f" << user_functions.size();
+		string name = ss.str();
+		vector<string> npi_stack = this->npi_stack;
+		user_functions[name] = func_ld(
+			[=](long double x){
+				const vector<string> pile = npi_stack;
+				return MathExpression::npi(pile, x);
+			}
+		);
+		printf("Added user function %s(x) : ", name.c_str());
+		print_vec(npi_stack);
+	}
 	
 	long double calculateElementStack(long double x){
 		return npi(npi_stack, x);
 	}
 	
 	
-	bool isOp(string el){
-		string ops("^+*/%-");
+	static bool isOp(string el){
+		string ops("^+*/%-(");
 		return ops.find(el) != ops.npos;
 		//return std::regex_match(el.c_str(), std::regex("[^+*/%-]"));
 	}
 	
-	bool isFunc(string el){
+	static bool isFunc(string el){
 		return functions.find(el) != functions.end();
 	}
 	
-	bool isConstante(string el){
+	static bool isUserFunc(string el){
+		return user_functions.find(el) != user_functions.end();
+	}
+	
+	static bool isConstante(string el){
 		return constantes.find(el) != constantes.end();
 	}
 	
-	template<typename T> T pop(vector<T>& pile){
-		T r;
+	template<typename T> static T pop(vector<T>& pile){
+		T r = T();
 		if(pile.size()>0){
 			r = pile.at(pile.size()-1);
 			pile.pop_back();
@@ -196,11 +215,11 @@ public:
 		return r;
 	}
 	
-	long double modulo(long double a, long double b){
+	static long double modulo(long double a, long double b){
 		return a/b - long(a/b);
 	}
 	
-	long double npi(vector<string> pile, long double x=3){
+	static long double npi(vector<string> pile, long double x=3){
 		vector<long double> operandes;
 		for(unsigned i=0; i<pile.size(); i++){
 			string el = pile[i];
@@ -240,6 +259,9 @@ public:
 			} else if(isFunc(el)){
 				long double var = pop(operandes);
 				operandes.push_back(functions[el](var));
+			} else if(isUserFunc(el)){
+				long double var = pop(operandes);
+				operandes.push_back(user_functions[el](var));
 			} else {
 				//printf("nombre : %s\n", el.c_str());
 				operandes.push_back(std::stold(el));
@@ -249,8 +271,28 @@ public:
 		return pop(operandes);
 	}
 	
+	void fix_implicit_substraction(){
+		// Fix negative number issues
+		
+		if(expr_stack[0][0] == '-')
+			expr_stack.insert(expr_stack.begin(), string("0"));
+			
+		unsigned i=1;
+		while(i<expr_stack.size()){
+			//printf("(%d) = %c <- %s (operator : %d)\n", int(i), expr_stack[i][0], expr_stack[i-1].c_str(), int(isOp(expr_stack[i-1])));
+			if(expr_stack[i][0] == '-' and isOp(expr_stack[i-1])){
+				printf("Minus found at %d following operator '%s'\n", int(i), expr_stack[i-1].c_str());
+				expr_stack.insert(expr_stack.begin() + i, string("0"));
+				i += 2;
+			} else{
+				i++;
+			}
+		}
+	}
+	
 	// Fonctionne
 	void shunting_yard2(){
+		
 		vector<string> operators;
 		vector<string> pile;
 		for(unsigned i=0; i<expr_stack.size(); i++){
@@ -263,7 +305,7 @@ public:
 					operators.pop_back();
 				}
 				operators.pop_back();
-			} else if(operators_prec.find(el) != operators_prec.end() or functions.find(el) != functions.end()){
+			} else if(isOp(el) or isFunc(el) or isUserFunc(el)){
 				while(operators.size() > 0 && prec(el) <= prec(operators.at(operators.size()-1))){
 					pile.push_back(operators.at(operators.size()-1));
 					operators.pop_back();
@@ -279,10 +321,10 @@ public:
 		npi_stack = pile;
 	}
 	
-	int prec(string el){
+	static int prec(string el){
 		if(operators_prec.find(el) != operators_prec.end()){
 			return operators_prec[el];
-		} else if(functions.find(el) != functions.end()){
+		} else if(isFunc(el) or isUserFunc(el)){
 			return 7;
 		} else {
 			return 0;
@@ -294,6 +336,7 @@ private:
 	vector<string> npi_stack;
 };
 map<string, int> MathExpression::operators_prec;
-map<string, function<long double(long double)> > MathExpression::functions;
+map<string, func_ld > MathExpression::functions;
+map<string, func_ld > MathExpression::user_functions;
 map<string, long double> MathExpression::constantes;
 bool MathExpression::initialized = false;

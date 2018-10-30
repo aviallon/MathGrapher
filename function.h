@@ -1,7 +1,11 @@
 #ifndef FUNCTION_H
 #define FUNCTION_H
 
+#include "includes.h"
+
 class Function{
+	point last_primitive_val = point(0, 0);
+	bool initializing = false;
 public:
 	Function(long double(*fptr)(long double), string nme = ""){
 		func_ptr = fptr;
@@ -9,7 +13,7 @@ public:
 		name = nme;
 	}
 	
-	Function(function<long double(long double)> f, string nme = ""){
+	Function(func_ld f, string nme = ""){
 		object = true;
 		f_obj = f;
 		
@@ -27,11 +31,11 @@ public:
 	}
 	
 	Function derivee(const long double set_pas = 0.05){
-		function<long double(long double)> f;
+		func_ld f;
 		if(object){
-			const function<long double(long double)> f_copy = f_obj;
+			const func_ld f_copy = f_obj;
 			f = [=](long double x){
-				//const function<long double(long double)> f_copy = f_obj;
+				//const func_ld f_copy = f_obj;
 				long double pas = set_pas;
 				return (f_copy(x)-f_copy(x-pas))/(pas);
 			};
@@ -50,39 +54,44 @@ public:
 	
 	Function primitive(const long double set_pas = 0.05){
 		function<long double(long double)> f;
+		long double x0 = 0;
+		long double aire0 = 0;
+		if(initializing){
+			x0 = last_primitive_val.first;
+			aire0 = last_primitive_val.second;
+		}
 		if(object){
 			const function<long double(long double)> f_copy = f_obj; 
 			f = [=](long double x){
 				long double pas = set_pas;
-				long double aire = 0;
-				int n = abs(round((x-0)/pas));
-				if( x < 0 )
+				long double aire = aire0;
+				int n = abs(round((x-x0)/pas));
+				if( x < x0 )
 					pas = -pas;
 				#pragma omp parallel for reduction(+:aire)
 				for(int i = 0; i <= n; i++){
-					long double g = i*pas;
+					long double g = x0 + i*pas;
 					long double d = g + pas;
 //					long double m = g + pas/2;
 					long double temp = f_copy(g)*pas + (f_copy(d)-f_copy(g))*pas/2;
 					aire += temp;
 				}
-				
 
 				return aire;
 			};
 		} else {
 			f = [=](long double x){
 				long double pas = set_pas;
-				long double aire = 0;
-				int n = abs(round((x-0)/pas));
-				if( x < 0 )
+				long double aire = aire0;
+				int n = abs(round((x-x0)/pas));
+				if( x < x0 )
 					pas = -pas;
 				#pragma omp parallel for reduction(+:aire)
 				for(int i = 0; i <= n; i++){
-					long double g = i*pas;
+					long double g = x0 + i*pas;
 					long double d = g + pas;
 					long double temp = func_ptr(g)*pas + (func_ptr(d)-func_ptr(g))*pas/2;
-					
+			
 					aire += temp;
 				}
 
@@ -101,7 +110,7 @@ public:
 	Function tangente(const long double xa){
 		const long double fprimea = this->derivee(0.01)(xa);
 		const long double fa = (*this)(xa);
-		function<long double(long double)> f;
+		func_ld f;
 		f = [=](long double x){
 			return fprimea*(x-xa) + fa;
 		};
@@ -115,10 +124,12 @@ public:
 	}
 	
 	long double operator()(long double x){
-		if(object)
+		last_primitive_val = point(0, 0);
+		if(object){
 			return f_obj(x);
-		else
+		}else{
 			return func_ptr(x);
+		}
 	}
 
 	bool initValues(long double debut, long double fin, long double pas){
@@ -130,6 +141,9 @@ public:
 		}
 		int n = (int)((fin-debut)/pas);
 		
+		last_primitive_val = point(0, 0);
+		initializing = true;
+		
 		for(int i = 0; i <= n; i++){
 			long double val = 0;
 			if(object)
@@ -137,11 +151,16 @@ public:
 			else
 				val = func_ptr(debut + pas*i);
 			values.push_back(val);
+			last_primitive_val.first = debut + pas*i;
+			last_primitive_val.second = val;
 		}
+		initializing = false;
 		
 		x_min = debut;
 		x_max = fin;
 		this->pas = pas;
+		
+		initialized = true;
 		
 		return true;
 	}
@@ -167,9 +186,10 @@ public:
 
 	bool selected = false;
 	bool hidden = false;
+	bool initialized = false;
 private:
 	long double (*func_ptr)(long double);
-	function<long double(long double)> f_obj;
+	func_ld f_obj;
 	bool object = false;
 	
 	string name = "";
