@@ -13,6 +13,7 @@
     <File Name="function.h"/>
     <File Name="mathparser.h"/>
     <VirtualDirectory Name="allegro">
+      <File Name="allegro/sprites.h"/>
       <File Name="allegro/mouse.h"/>
       <File Name="allegro/mouse.cpp"/>
       <File Name="allegro/gui.h"/>
